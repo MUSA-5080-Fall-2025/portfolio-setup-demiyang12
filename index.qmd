@@ -15,8 +15,12 @@ Advanced spatial analysis and data science for urban planning and public policy.
 - **Final Project:** Capstone modeling challenge
 
 ## About Me
-[Students will customize this section]
+- **Name:** Yuqing(Demi) Yang.
+- **Background:** Urban Planning
+- **Email:** yang1212@upenn.edu
+- **GitHub Username:** demiyang12
+
 
 ## Contact
-- Email: [your.email@upenn.edu]
-- GitHub: [@your-username]
+- Email: yang1212.email@upenn.edu
+- GitHub: demiyang12

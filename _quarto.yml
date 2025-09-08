@@ -3,14 +3,21 @@ project:
   output-dir: docs
 
 website:
-  title: "Your Name - MUSA 5080 Portfolio"
+  title: "Demi_Yang - MUSA 5080 Portfolio"
   navbar:
     left:
       - href: index.qmd
         text: Home
-      - href: weekly-notes/
-        text: Weekly Notes
-
+      - href: about.qmd
+        text: About
+      - text: "Weekly notes"
+        menu:
+          - href: weekly-notes/
+            text: "All notes"
+          - href: weekly-notes/week-01-notes.qmd
+            text: "Week 1"
+          - href: weekly-notes/week-02-notes.qmd
+            text: "Week 2"
 format:
   html:
     theme: cosmo
