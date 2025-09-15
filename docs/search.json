@@ -4,7 +4,7 @@
     "href": "index.html",
     "title": "MUSA 5080 Portfolio",
     "section": "",
-    "text": "This portfolio documents my learning journey in Public Policy Analytics (MUSA 5080).\n\n\nAdvanced spatial analysis and data science for urban planning and public policy.\n\n\n\n\nWeekly Notes: My learning reflections and key concepts\nLabs: Completed assignments and analyses\nFinal Project: Capstone modeling challenge\n\n\n\n\n\nName: Yuqing(Demi) Yang.\nBackground: Urban Planning\nEmail: yang1212@upenn.edu\nGitHub Username: demiyang12\n\n\n\n\n\nEmail: yang1212.email@upenn.edu\nGitHub: demiyang12"
+    "text": "This portfolio documents my learning journey in Public Policy Analytics (MUSA 5080).\n\n\nAdvanced spatial analysis and data science for urban planning and public policy.\n\n\n\n\nWeekly Notes: My learning reflections and key concepts\nLabs: Completed assignments and analyses\nFinal Project: Capstone modeling challenge\n\n\n\n\n\nName: Yuqing(Demi) Yang\nBackground: Urban Planning\n\n\n\n\n\nEmail: yang1212.email@upenn.edu\nGitHub: demiyang12"
   },
   {
     "objectID": "index.html#about-this-course",
@@ -25,7 +25,7 @@
     "href": "index.html#about-me",
     "title": "MUSA 5080 Portfolio",
     "section": "",
-    "text": "Name: Yuqing(Demi) Yang.\nBackground: Urban Planning\nEmail: yang1212@upenn.edu\nGitHub Username: demiyang12"
+    "text": "Name: Yuqing(Demi) Yang\nBackground: Urban Planning"
   },
   {
     "objectID": "index.html#contact",
@@ -53,7 +53,7 @@
     "href": "weekly-notes/week-01-notes.html#coding-techniques",
     "title": "Week 1 Notes - Course Introduction",
     "section": "Coding Techniques",
-    "text": "Coding Techniques\n\nCode Structrue\nNewDataName &lt;- Verb(NameOfData, NewColumsName = HowToGetNewData)\n\n\nTidyverse\nlibrary(tidyverse) - Load Tidyverse\n\nTibbles:\nclass()- Check the type of the object  car_data &lt;- as_tibble(data)- Convert “car_data” to tibble \n\n\ndplyr:\nselect() - choose columns  filter() - choose rows  mutate() - create new variables  summarize() - calculate statistics  group_by() - operate on groups  car_data &lt;- read_csv(\"data/car_sales_data.csv\") Load car sales data  glimpse() - Quickly view the structure of the data names() - Output the names of all columns  %&gt;% - Place at the end of the code line, read as “then”\n\nPass the result on the left to the first parameter of the function on the right.\nMake it more natural to read the code from top to bottom rather than nesting it layer by layer."
+    "text": "Coding Techniques\n\n1. Code Structrue\nNewDataName &lt;- Verb(NameOfData, NewColumsName = HowToGetNewData)\n\n\n2. Tidyverse\nlibrary(tidyverse) - Load Tidyverse\n\nTibbles:\nclass()- Check the type of the object  car_data &lt;- as_tibble(data)- Convert “car_data” to tibble \n\n\ndplyr:\nselect() - choose columns  filter() - choose rows  mutate() - create new variables  summarize() - calculate statistics  group_by() - operate on groups  car_data &lt;- read_csv(\"data/car_sales_data.csv\") Load car sales data  glimpse() - Quickly view the structure of the data names() - Output the names of all columns  %&gt;% - Place at the end of the code line, read as “then”\n\nPass the result on the left to the first parameter of the function on the right.\nMake it more natural to read the code from top to bottom rather than nesting it layer by layer."
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#questions-challenges",
