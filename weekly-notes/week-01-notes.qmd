@@ -4,20 +4,90 @@ date: "2025-09-08"
 ---
 
 ## Key Concepts Learned
-- [List main concepts from lecture]
-- [Technical skills covered]
+### 1. Git ---Version Control System (VCS)
+- Track changes to files
+- Compare different versions
+- Revert to previous version
+- Branch Management
+- Offline Operations
+- Backup
+- Collaboration
+
+### 2. GitHub ---Cloud hosting for Git repositories
+- Remote Repository Hosting
+- Collaboration
+- Permissions & Team Management
+- Community <br>
+  - **Repository (repo):** Folder containing your project files <br>
+  - **Commit:** Snapshot of your work at a point in time <br>
+  - **Push:** Send your changes to GitHub cloud <br>
+  - **Pull:** Get latest changes from GitHub cloud <br>
+
+### 3. Quarto ---A publish system
+- Multi-language support
+- Multiple output formats
+- Reproducible research
+- Next generation of R Markdown(rmd): Better website creation + Multiple programming languages
+
+### 4. R ---A programming language for statistical computing and data analysis
+- Free and open source
+- Statistical analysis
+- Excellent for spatial data
+- Extensible ecosystem *in urban planning and policy*
+- Reproducible research
+
+### 5. Tidyverse ---Collection of packages designed for data science
+- Data import & cleaning
+- Data manipulation
+- Data visualization
+- Consistent grammar
+- Extensible ecosystem
 
 ## Coding Techniques
-- [New R functions or approaches]
-- [Quarto features learned]
+
+### Code Structrue
+`NewDataName <- Verb(NameOfData, NewColumsName = HowToGetNewData)`
+
+### Tidyverse
+`library(tidyverse)` - Load Tidyverse
+
+#### Tibbles:
+`class()`- Check the type of the object <br>
+`car_data <- as_tibble(data)`- Convert "car_data" to tibble <br>
+
+#### dplyr:
+
+`select()` - choose columns <br>
+`filter()` - choose rows <br>
+`mutate()` - create new variables <br>
+`summarize()` - calculate statistics <br>
+`group_by()` - operate on groups <br>
+`car_data <- read_csv("data/car_sales_data.csv")` Load car sales data <br>
+`glimpse()` - Quickly view the structure of the data<br>
+`names()` - Output the names of all columns <br>
+`%>%` - Place at the end of the code line, read as "then"
+
+  - Pass the result on the left to the first parameter of the function on the right.
+  - Make it more natural to read the code from top to bottom rather than nesting it layer by layer.
+
 
 ## Questions & Challenges
-- [What I didn't fully understand]
-- [Areas needing more practice]
+- Try to insert pictures in the next set of notes 
+- Explore more formatting options, such as changing the font color and size
 
 ## Connections to Policy
-- [How this week's content applies to real policy work]
+
+### 1. R
+**Data-driven policy evaluation** - Use R to import government datasets
+
+### 2.Tidyverse
+**Data wrangling** - Analysts can transform messy administrative data (e.g., census, health records) into structured datasets suitable for policy reports. <br>
+**Reproducibility** - Tidyverse workflows make data cleaning and analysis transparent, so others can replicate results when auditing or reviewing policy impacts.
+
+### 3.Quarto
+**Integrated reports** - Combine narrative, data, statistical analysis, and visualization into a single document
 
 ## Reflection
-- [What was most interesting]
-- [How I'll apply this knowledge]
+- Feels like I made a website by myself, yay!
+- Known a new method to build a note-based website instead of Java Script.
+- Had a little knowledge about data cleansing in R.

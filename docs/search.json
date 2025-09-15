@@ -39,42 +39,42 @@
     "href": "weekly-notes/week-01-notes.html",
     "title": "Week 1 Notes - Course Introduction",
     "section": "",
-    "text": "[List main concepts from lecture]\n[Technical skills covered]"
+    "text": "Track changes to files\nCompare different versions\nRevert to previous version\nBranch Management\nOffline Operations\nBackup\nCollaboration\n\n\n\n\n\nRemote Repository Hosting\nCollaboration\nPermissions & Team Management\nCommunity \n\nRepository (repo): Folder containing your project files \nCommit: Snapshot of your work at a point in time \nPush: Send your changes to GitHub cloud \nPull: Get latest changes from GitHub cloud \n\n\n\n\n\n\nMulti-language support\nMultiple output formats\nReproducible research\nNext generation of R Markdown(rmd): Better website creation + Multiple programming languages\n\n\n\n\n\nFree and open source\nStatistical analysis\nExcellent for spatial data\nExtensible ecosystem in urban planning and policy\nReproducible research\n\n\n\n\n\nData import & cleaning\nData manipulation\nData visualization\nConsistent grammar\nExtensible ecosystem"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#key-concepts-learned",
     "href": "weekly-notes/week-01-notes.html#key-concepts-learned",
     "title": "Week 1 Notes - Course Introduction",
     "section": "",
-    "text": "[List main concepts from lecture]\n[Technical skills covered]"
+    "text": "Track changes to files\nCompare different versions\nRevert to previous version\nBranch Management\nOffline Operations\nBackup\nCollaboration\n\n\n\n\n\nRemote Repository Hosting\nCollaboration\nPermissions & Team Management\nCommunity \n\nRepository (repo): Folder containing your project files \nCommit: Snapshot of your work at a point in time \nPush: Send your changes to GitHub cloud \nPull: Get latest changes from GitHub cloud \n\n\n\n\n\n\nMulti-language support\nMultiple output formats\nReproducible research\nNext generation of R Markdown(rmd): Better website creation + Multiple programming languages\n\n\n\n\n\nFree and open source\nStatistical analysis\nExcellent for spatial data\nExtensible ecosystem in urban planning and policy\nReproducible research\n\n\n\n\n\nData import & cleaning\nData manipulation\nData visualization\nConsistent grammar\nExtensible ecosystem"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#coding-techniques",
     "href": "weekly-notes/week-01-notes.html#coding-techniques",
     "title": "Week 1 Notes - Course Introduction",
     "section": "Coding Techniques",
-    "text": "Coding Techniques\n\n[New R functions or approaches]\n[Quarto features learned]"
+    "text": "Coding Techniques\n\nCode Structrue\nNewDataName &lt;- Verb(NameOfData, NewColumsName = HowToGetNewData)\n\n\nTidyverse\nlibrary(tidyverse) - Load Tidyverse\n\nTibbles:\nclass()- Check the type of the object  car_data &lt;- as_tibble(data)- Convert “car_data” to tibble \n\n\ndplyr:\nselect() - choose columns  filter() - choose rows  mutate() - create new variables  summarize() - calculate statistics  group_by() - operate on groups  car_data &lt;- read_csv(\"data/car_sales_data.csv\") Load car sales data  glimpse() - Quickly view the structure of the data names() - Output the names of all columns  %&gt;% - Place at the end of the code line, read as “then”\n\nPass the result on the left to the first parameter of the function on the right.\nMake it more natural to read the code from top to bottom rather than nesting it layer by layer."
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#questions-challenges",
     "href": "weekly-notes/week-01-notes.html#questions-challenges",
     "title": "Week 1 Notes - Course Introduction",
     "section": "Questions & Challenges",
-    "text": "Questions & Challenges\n\n[What I didn’t fully understand]\n[Areas needing more practice]"
+    "text": "Questions & Challenges\n\nTry to insert pictures in the next set of notes\nExplore more formatting options, such as changing the font color and size"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#connections-to-policy",
     "href": "weekly-notes/week-01-notes.html#connections-to-policy",
     "title": "Week 1 Notes - Course Introduction",
     "section": "Connections to Policy",
-    "text": "Connections to Policy\n\n[How this week’s content applies to real policy work]"
+    "text": "Connections to Policy\n\n1. R\nData-driven policy evaluation - Use R to import government datasets\n\n\n2.Tidyverse\nData wrangling - Analysts can transform messy administrative data (e.g., census, health records) into structured datasets suitable for policy reports.  Reproducibility - Tidyverse workflows make data cleaning and analysis transparent, so others can replicate results when auditing or reviewing policy impacts.\n\n\n3.Quarto\nIntegrated reports - Combine narrative, data, statistical analysis, and visualization into a single document"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#reflection",
     "href": "weekly-notes/week-01-notes.html#reflection",
     "title": "Week 1 Notes - Course Introduction",
     "section": "Reflection",
-    "text": "Reflection\n\n[What was most interesting]\n[How I’ll apply this knowledge]"
+    "text": "Reflection\n\nFeels like I made a website by myself, yay!\nKnown a new method to build a note-based website instead of Java Script.\nHad a little knowledge about data cleansing in R."
   },
   {
     "objectID": "weekly-notes/week-02-notes.html",
@@ -117,5 +117,12 @@
     "title": "Week 2 Notes - Course Introduction",
     "section": "Reflection",
     "text": "Reflection\n\n[What was most interesting]\n[How I’ll apply this knowledge]"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "Demi_Yang - MUSA 5080 Portfolio",
+    "section": "",
+    "text": "Nothing to say in this page. Built it just for avoiding 404 Not Found warning. :)"
   }
 ]
