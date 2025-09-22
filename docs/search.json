@@ -81,42 +81,42 @@
     "href": "weekly-notes/week-02-notes.html",
     "title": "Week 2 Notes - Course Introduction",
     "section": "",
-    "text": "[List main concepts from lecture]\n[Technical skills covered]"
+    "text": "A set of rules or instructions for solving a problem or completing a task\n\nAlgorithmic Decision Making in Government\n\nSystems used to assist or replace human decision-makers\nCriminal Justice: Recidivism risk scores for bail and sentencing decisions  Housing & Finance: Mortgage lending and tenant screening algorithms  Healthcare Patient: care prioritization and resource allocation\n\nWhy Government Uses Algorithms\n\nEfficiency: process more cases faster  Consistency: same rules applied to everyone  Objectivity: removes human bias  Cost savings: fewer staff needed \n\nWhen Algorithms Go Wrong\n\nEvery step involves human choices which embed human values and biases\nData cleaning decisions  Data collection: use of imperfect proxies  How you interpret results  What variables you put in the model  Examples: Healthcare Algorithm Bias/ Criminal Justice Algorithm Bias/ Dutch Welfare Fraud Detection\n\n\n\n\nDecennial Census\n\n9 basic questions: age, race, sex, housing  Everyone counted every 10 years Block group level - very local analysis (Pay attention to big MOEs) Differential Privacy: Add mathematical “noise” to protect privacy while preserving overall patterns Summary Tables vs PUMS - Individual Records\n\nAmerican Community Survey (ACS)\n\nDetailed questions: income, education, employment, housing costs  3% of households surveyed annually  1-Year Estimates vs 5-Year Estimates\n\nWhy matters Understanding community demographics/ Allocating government resources/ Tracking neighborhood change/ Designing fair algorithms\nACS result includes\n\nGEOID - Geographic identifier  NAME - Human-readable location name  variable - Census variable code  estimate - The actual value  moe - Margin of error"
   },
   {
     "objectID": "weekly-notes/week-02-notes.html#key-concepts-learned",
     "href": "weekly-notes/week-02-notes.html#key-concepts-learned",
     "title": "Week 2 Notes - Course Introduction",
     "section": "",
-    "text": "[List main concepts from lecture]\n[Technical skills covered]"
+    "text": "A set of rules or instructions for solving a problem or completing a task\n\nAlgorithmic Decision Making in Government\n\nSystems used to assist or replace human decision-makers\nCriminal Justice: Recidivism risk scores for bail and sentencing decisions  Housing & Finance: Mortgage lending and tenant screening algorithms  Healthcare Patient: care prioritization and resource allocation\n\nWhy Government Uses Algorithms\n\nEfficiency: process more cases faster  Consistency: same rules applied to everyone  Objectivity: removes human bias  Cost savings: fewer staff needed \n\nWhen Algorithms Go Wrong\n\nEvery step involves human choices which embed human values and biases\nData cleaning decisions  Data collection: use of imperfect proxies  How you interpret results  What variables you put in the model  Examples: Healthcare Algorithm Bias/ Criminal Justice Algorithm Bias/ Dutch Welfare Fraud Detection\n\n\n\n\nDecennial Census\n\n9 basic questions: age, race, sex, housing  Everyone counted every 10 years Block group level - very local analysis (Pay attention to big MOEs) Differential Privacy: Add mathematical “noise” to protect privacy while preserving overall patterns Summary Tables vs PUMS - Individual Records\n\nAmerican Community Survey (ACS)\n\nDetailed questions: income, education, employment, housing costs  3% of households surveyed annually  1-Year Estimates vs 5-Year Estimates\n\nWhy matters Understanding community demographics/ Allocating government resources/ Tracking neighborhood change/ Designing fair algorithms\nACS result includes\n\nGEOID - Geographic identifier  NAME - Human-readable location name  variable - Census variable code  estimate - The actual value  moe - Margin of error"
   },
   {
     "objectID": "weekly-notes/week-02-notes.html#coding-techniques",
     "href": "weekly-notes/week-02-notes.html#coding-techniques",
     "title": "Week 2 Notes - Course Introduction",
     "section": "Coding Techniques",
-    "text": "Coding Techniques\n\n[New R functions or approaches]\n[Quarto features learned]"
+    "text": "Coding Techniques\n\ntidycensus—R packages to access data directly\nAlways get latest data/ Reproducible workflows/ Automatic geographic boundaries/ Built-in error handling\n\n\nRules of using data\n\nSmall MOE relative to estimate = more reliable\nAlways report MOE alongside estimates\nBe cautious comparing estimates with overlapping error margins\nConsider using 5-year estimates for greater reliability\n\n\n\nCodes\noutput = \"wide\" - gives you one row per place, multiple columns for variables  str_remove()/ str_extract()/ str_replace() - Clean up messy geographic names  case_when() - for categories, MOE calculations(Calculating Data Reliability)  kable() - for professional formatting"
   },
   {
     "objectID": "weekly-notes/week-02-notes.html#questions-challenges",
     "href": "weekly-notes/week-02-notes.html#questions-challenges",
     "title": "Week 2 Notes - Course Introduction",
     "section": "Questions & Challenges",
-    "text": "Questions & Challenges\n\n[What I didn’t fully understand]\n[Areas needing more practice]"
+    "text": "Questions & Challenges\n\nThe accurate and best steps of using these data"
   },
   {
     "objectID": "weekly-notes/week-02-notes.html#connections-to-policy",
     "href": "weekly-notes/week-02-notes.html#connections-to-policy",
     "title": "Week 2 Notes - Course Introduction",
     "section": "Connections to Policy",
-    "text": "Connections to Policy\n\n[How this week’s content applies to real policy work]"
+    "text": "Connections to Policy\n\nAlgorithms help a lot in policy decisions"
   },
   {
     "objectID": "weekly-notes/week-02-notes.html#reflection",
     "href": "weekly-notes/week-02-notes.html#reflection",
     "title": "Week 2 Notes - Course Introduction",
     "section": "Reflection",
-    "text": "Reflection\n\n[What was most interesting]\n[How I’ll apply this knowledge]"
+    "text": "Reflection\n\nFinally knew why this course is called “Public Policy Analysis”…"
   },
   {
     "objectID": "about.html",
@@ -124,5 +124,12 @@
     "title": "Demi_Yang - MUSA 5080 Portfolio",
     "section": "",
     "text": "Nothing to say in this page. Built it just for avoiding 404 Not Found warning. :)"
+  },
+  {
+    "objectID": "weekly-notes/week-02-notes.html#healthcare-patient-care-prioritization-and-resource-allocation",
+    "href": "weekly-notes/week-02-notes.html#healthcare-patient-care-prioritization-and-resource-allocation",
+    "title": "Week 2 Notes - Course Introduction",
+    "section": "Healthcare Patient: care prioritization and resource allocation",
+    "text": "Healthcare Patient: care prioritization and resource allocation"
   }
 ]

@@ -4,20 +4,82 @@ date: "2025-09-08"
 ---
 
 ## Key Concepts Learned
-- [List main concepts from lecture]
-- [Technical skills covered]
+### Algorithm
+A set of rules or instructions for solving a problem or completing a task
+
+- **Algorithmic Decision Making in Government**
+
+Systems used to assist or replace human decision-makers 
+
+**Criminal Justice:** Recidivism risk scores for bail and sentencing decisions <br>
+**Housing & Finance:** Mortgage lending and tenant screening algorithms <br>
+**Healthcare Patient:** care prioritization and resource allocation
+
+- **Why Government Uses Algorithms**
+
+**Efficiency:** process more cases faster <br>
+**Consistency:** same rules applied to everyone <br>
+**Objectivity:** removes human bias <br>
+**Cost savings:** fewer staff needed <br>
+
+- **When Algorithms Go Wrong**
+
+Every step involves human choices which embed human values and biases
+
+**Data cleaning decisions** <br>
+**Data collection:** use of imperfect proxies <br>
+**How you interpret results** <br>
+**What variables you put in the model** <br>
+**Examples:** Healthcare Algorithm Bias/ Criminal Justice Algorithm Bias/ Dutch Welfare Fraud Detection
+
+
+### Census Data and American Community Survey (ACS)
+- **Decennial Census**
+
+**9 basic questions:** age, race, sex, housing <br>
+**Everyone** counted every 10 years<br>
+Block group level - very local analysis (Pay attention to **big MOEs**)<br>
+**Differential Privacy:** Add mathematical “noise” to protect privacy while preserving overall patterns
+**Summary Tables** vs **PUMS - Individual Records**
+
+- **American Community Survey (ACS)**
+
+**Detailed questions:** income, education, employment, housing costs <br>
+3% of households surveyed **annually** <br>
+**1-Year Estimates** vs **5-Year Estimates**
+
+- **Why matters**
+Understanding community demographics/ Allocating government resources/ Tracking neighborhood change/ Designing fair algorithms
+
+- **ACS result includes**
+
+`GEOID` - Geographic identifier <br>
+`NAME` - Human-readable location name <br>
+`variable` - Census variable code <br>
+`estimate` - The actual value <br>
+`moe` - Margin of error <br>
 
 ## Coding Techniques
-- [New R functions or approaches]
-- [Quarto features learned]
+### tidycensus---R packages to access data directly
+Always get latest data/ Reproducible workflows/ Automatic geographic boundaries/ Built-in error handling
+
+### Rules of using data
+- Small MOE relative to estimate = **more reliable**
+- Always **report MOE** alongside estimates
+- Be cautious comparing estimates with **overlapping error margins**
+- Consider using 5-year estimates for greater reliability
+
+### Codes
+`output = "wide"` - gives you one row per place, multiple columns for variables <br>
+`str_remove()`/ `str_extract()`/ `str_replace()` - Clean up messy geographic names <br>
+`case_when()` - for categories, MOE calculations(Calculating Data Reliability) <br>
+`kable()` - for professional formatting
 
 ## Questions & Challenges
-- [What I didn't fully understand]
-- [Areas needing more practice]
+- The accurate and best steps of using these data
 
 ## Connections to Policy
-- [How this week's content applies to real policy work]
+- Algorithms help a lot in policy decisions
 
 ## Reflection
-- [What was most interesting]
-- [How I'll apply this knowledge]
+- Finally knew why this course is called “Public Policy Analysis”...
