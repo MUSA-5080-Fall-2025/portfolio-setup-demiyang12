@@ -172,7 +172,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-assignments">    
         <li>
-    <a class="dropdown-item" href="../../assignments/assignments_1/assignments1_CensusDataExploration.qmd">
+    <a class="dropdown-item" href="../../assignments/assignment_1/assignments1_CensusDataExploration.html">
  <span class="dropdown-text">Assignment 1: Census Data Explorations</span></a>
   </li>  
     </ul>
@@ -1079,9 +1079,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p><strong>Key Recommendations:</strong></p>
 <p><strong>Your Task:</strong> Use your analysis results to provide specific guidance to the department.</p>
-<ol type="1">
-<li><strong>Counties suitable for immediate algorithmic implementation:</strong></li>
-</ol>
+<p><strong>1. Counties suitable for immediate algorithmic implementation:</strong></p>
 <p><em>List counties with high confidence data and explain why they’re appropriate</em></p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>high_conf_table <span class="ot">&lt;-</span> recommendations_data <span class="sc">%&gt;%</span></span>
@@ -1410,9 +1408,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>These counties MOE percentages are below 5%, which means ACS estimates for income are highly reliable. These counties may have large populations and robust sample sizes, so algorithmic tools can be implemented with relatively low risk.</p>
-<ol start="2" type="1">
-<li><strong>Counties requiring additional oversight:</strong></li>
-</ol>
+<p><strong>2. Counties requiring additional oversight:</strong></p>
 <p><em>List counties with moderate confidence data and describe what kind of monitoring would be needed</em></p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>moderate_conf_table <span class="ot">&lt;-</span> recommendations_data <span class="sc">%&gt;%</span></span>
@@ -1523,9 +1519,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Here MOE percentages fall between 5% and 10%, which suggests estimates are usable but not fully stable. Algorithms in these counties should be monitored through outcome validation, such as: <br> - Establishing periodic human review of outputs. <br> - Running sensitivity tests to see if small shifts in inputs change results disproportionately.</p>
-<ol start="3" type="1">
-<li><strong>Counties needing alternative approaches:</strong></li>
-</ol>
+<p><strong>3. Counties needing alternative approaches:</strong></p>
 <p><em>List counties with low confidence data and suggest specific alternatives - manual review, additional surveys, etc.</em></p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>low_conf_table <span class="ot">&lt;-</span> recommendations_data <span class="sc">%&gt;%</span></span>

@@ -24,7 +24,7 @@ website:
             text: "Lab 0: dplyr Basics"
       - text: "Assignments"
         menu: 
-          - href: assignments/assignments_1/assignments1_CensusDataExploration.qmd
+          - href: assignments/assignment_1/assignments1_CensusDataExploration.qmd
             text: "Assignment 1: Census Data Explorations"
 format:
   html:

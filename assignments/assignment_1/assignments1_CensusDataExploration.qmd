@@ -525,7 +525,7 @@ kable(head(recommendations_data,10), digits = 1,
 **Your Task:** Use your analysis results to provide specific guidance to
 the department.
 
-1.  **Counties suitable for immediate algorithmic implementation:**
+ **1. Counties suitable for immediate algorithmic implementation:**
 
 *List counties with high confidence data and explain why they're appropriate*
     
@@ -540,7 +540,7 @@ kable(high_conf_table, digits = 1,
 ```
 These counties MOE percentages are below 5%, which means ACS estimates for income are highly reliable. These counties may have large populations and robust sample sizes, so algorithmic tools can be implemented with relatively low risk.
 
-2.  **Counties requiring additional oversight:** 
+**2.  Counties requiring additional oversight:** 
 
 *List counties with moderate confidence data and describe what kind of monitoring would be needed*
     
@@ -556,7 +556,7 @@ Here MOE percentages fall between 5% and 10%, which suggests estimates are usabl
 -  Establishing periodic human review of outputs. <br>
 -  Running sensitivity tests to see if small shifts in inputs change results disproportionately.
 
-3.  **Counties needing alternative approaches:**
+**3.  Counties needing alternative approaches:**
 
 *List counties with low confidence data and suggest specific alternatives - manual review, additional surveys, etc.*
     
