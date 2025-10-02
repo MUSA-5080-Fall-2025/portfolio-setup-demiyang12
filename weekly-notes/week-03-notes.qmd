@@ -1,0 +1,136 @@
+---
+title: "Week 3 Notes - Data Visualization & Exploratory Analysis"
+date: "2025-09-22"
+---
+
+## Key Concepts Learned
+### Why Visualization Matters
+
+- **Anscombe’s Quartet: The Famous Example**
+
+Four datasets with identical summary statistics:5 <br>
+Same means (x̄ = 9, ȳ = 7.)5 <br>
+Same variances <br>
+Same correlation (r = 0.816) <br>
+Same regression line <br>
+**But completely different patterns when visualized**
+
+- **The Policy Implications**
+
+-Summary statistics can hide critical patterns <br>
+-Outliers may represent important communities <br>
+-Relationships aren’t always linear <br>
+-Visual inspection reveals data quality issues <br>
+
+- **Bad Visualizations Have Real Consequences**
+
+Common problems in government data presentation: <br>
+-Misleading scales or axes <br>
+-Cherry-picked time periods <br>
+-Hidden or ignored uncertainty <br>
+-Missing context about data reliability <br>
+**Real impact:** 72% of Portland census tracts had unreliable child poverty estimates, yet planners rarely communicated this uncertainty. <br>
+**Result:** Poor policy decisions based on misunderstood data
+
+### Grammar of Graphics
+- **The ggplot2 Philosophy**
+
+Grammar of Graphics principles: <br>
+**Data:** Your dataset (census data, survey responses, etc.) <br>
+**Aesthetics:** What variables map to visual properties (x, y, color, size) <br>
+**Geometries:** How to display the data (points, bars, lines) <br>
+**Additional layers:** Scales, themes, facets, annotations <br>
+
+### Exploratory Data Analysis
+- **The EDA Mindset**
+
+Exploratory Data Analysis is detective work: <br>
+-What does the data look like? (distributions, missing values) <br>
+-What patterns exist? (relationships, clusters, trends) <br>
+-What’s unusual? (outliers, anomalies, data quality issues) <br>
+-What questions does this raise? (hypotheses for further investigation) <br>
+-How reliable is this data?
+
+**Goal:** Understand your data before making decisions or building models
+
+- **EDA Workflow with Data Quality Focus**
+
+Enhanced process for policy analysis: <br>
+**Load and inspect** - dimensions, variable types, missing data <br>
+**Assess reliability** - examine margins of error, calculate coefficients of variation <br>
+**Visualize distributions** - histograms, boxplots for each variable <br>
+**Explore relationships** - scatter plots, correlations <br>
+**Identify patterns** - grouping, clustering, geographical patterns <br>
+**Question anomalies** - investigate outliers and unusual patterns <br>
+**Document limitations** - prepare honest communication about data quality <br>
+
+- **Understanding Distributions**
+
+**What to look for:** Skewness, outliers, multiple peaks, gaps
+
+- **Critical: Data Quality Through Visualization**
+
+**Research insight:** Most planners don’t visualize or communicate uncertainty <br>
+**Pattern:** Smaller populations have higher uncertainty Ethical implication: These communities might be systematically undercounted <br> 
+**Block** - **Block Group(ACS)** - **Census Tracts(Census)**, MOE gets smaller
+
+- **Research-Based Recommendations for Planners**
+
+5 Essential Guidelines for Using ACS Data(Jurjevich et al. 2018) <br>
+**1. Report the corresponding MOEs of ACS estimates** - Always include margin of error values <br>
+**2.Include a footnote when not reporting MOEs** - Explicitly acknowledge omission <br>
+**3.Provide context for (un)reliability** - Use coefficient of variation (CV): <br>
+  - CV < 12% = reliable (green coding) <br>
+  - CV 12-40% = somewhat reliable (yellow) <br>
+  - CV > 40% = unreliable (red coding) <br>
+**4.Reduce statistical uncertainty** - Collapse data detail, aggregate geographies, use multi-year estimates <br>
+**5.Always conduct statistical significance tests** when comparing ACS estimates over time <br>
+
+**Key insight:** These practices are not just technical best practices—they are ethical requirements under the AICP Code of Ethics
+
+- **EDA for Policy Analysis**
+
+Key questions for census data: <br>
+**Geographic patterns:** Are problems concentrated in certain areas? <br>
+**Population relationships:** How does size affect data quality? <br>
+**Demographic patterns:** Are certain communities systematically different? <br>
+**Temporal trends:** How do patterns change over time? <br>
+**Data integrity:** Where might survey bias affect results? <br>
+**Reliability assessment:** Which estimates should we trust? <br>
+
+### Data Joins & Integration
+
+- **Why Join Data?**
+-Census demographics + Economic indicators <br>
+-Survey responses + Geographic boundaries <br>
+-Current data + Historical trends <br>
+-Administrative records + Survey data <br>
+
+- **Types of Joins (tabular)**
+
+Four main types in dplyr: <br>
+`left_join()` - Keep all rows from left dataset <br>
+`right_join()` - Keep all rows from right dataset <br>
+`inner_join()` - Keep only rows that match in both <br>
+`full_join()` - Keep all rows from both datasets <br>
+
+**Most common:** left_join() to add columns to your main dataset
+
+## Coding Techniques
+### Basic ggplot2 Structure
+Every ggplot has this pattern:
+`ggplot(data = your_data) +   aes(x = variable1, y = variable2) +   geom_something() +   additional_layers()`
+
+`+`to add layers
+
+
+## Questions & Challenges
+- ggplot grammar
+- How to read a boxplot
+
+## Connections to Policy
+- Data visualization directly affects the understanding of the public and decision-makers <br>
+- Box plots or scatter plots can reveal extreme values, which often represent the conditions of vulnerable groups and may require special attention in policy <br>
+
+## Reflection
+- In policy analysis, I need to constantly ponder: Will my charts be misleading? Does it fully reflect the limitations of the data?

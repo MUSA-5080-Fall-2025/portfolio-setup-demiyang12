@@ -1,5 +1,5 @@
 ---
-title: "Week 1 Notes - Course Introduction"
+title: "Week 1 Notes - Introduction to R and dplyr"
 date: "2025-09-08"
 ---
 

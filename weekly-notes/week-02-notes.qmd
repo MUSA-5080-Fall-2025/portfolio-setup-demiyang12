@@ -1,12 +1,12 @@
 ---
-title: "Week 2 Notes - Course Introduction"
-date: "2025-09-08"
+title: "Week 2 Notes - Algorithmic Decision Making & The Census"
+date: "2025-09-15"
 ---
 
 ## Key Concepts Learned
-### Algorithm
+### Algorith
 A set of rules or instructions for solving a problem or completing a task
-
+sssss
 - **Algorithmic Decision Making in Government**
 
 Systems used to assist or replace human decision-makers 
