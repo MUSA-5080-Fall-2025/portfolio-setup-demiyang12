@@ -30,6 +30,8 @@ website:
         menu: 
           - href: assignments/assignment_1/assignment1_CensusDataExploration.qmd
             text: "Assignment 1: Census Data Explorations"
+          - href: assignments/assignment_2/assignment2_SpatialAnalysisAndVisualization.qmd
+            text: "Assignment 2: Spatial Analysis and Visualization"
 format:
   html:
     theme: cosmo
@@ -38,3 +40,4 @@ format:
 
 execute:
   freeze: auto
+
