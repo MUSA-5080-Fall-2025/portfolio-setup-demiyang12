@@ -1,5 +1,4 @@
 ---
-
 title: "Assignment 2: Spatial Analysis and Visualization"
 subtitle: "Healthcare Access and Equity in Pennsylvania"
 author: "Yuqing(Demi) Yang"
@@ -16,7 +15,6 @@ execute:
   warning: false
   message: false
   echo: true
-  
 ---
 
 ## Assignment Overview
@@ -911,7 +909,7 @@ kable(summary_table, caption = "Summary of Datasets Used")
 **Questions to answer:**
 
 - **What dataset did you choose and why?**
-  -I selected three datasets that represent educational and community infrastructure in Philadelphia: Libraries; Schools; Recreation Centers.
+  - I selected three datasets that represent educational and community infrastructure in Philadelphia: Libraries; Schools; Recreation Centers.
   
 - **What is the data source and date?**
   - Libraries: Extracted from OpenStreetMap (via global GeoPackage export, likely updated in 2024–2025).
@@ -1262,9 +1260,13 @@ ggplot() +
 ```
 
 **Analysis requirements:**
+
 - Clear code comments explaining each step
+
 - Appropriate CRS transformations
+
 - Summary statistics or counts
+
 - At least one map showing your findings
 - Brief interpretation of results (3-5 sentences)
 
