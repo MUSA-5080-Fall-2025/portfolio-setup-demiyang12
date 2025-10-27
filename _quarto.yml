@@ -34,7 +34,7 @@ website:
             text: "Assignment 2: Spatial Analysis and Visualization"
       - text: "Mid-term"
         menu: 
-          - href: midterm/appendix/
+          - href: midterm/appendix/Yuqing(Demi)_Yang_appendix.qmd
             text: "Appendix: Residential Sale Price Prediction" 
           - href: midterm/slides/Yuqing(Demi)_Yang_Presentation.qmd
             text: "Slides: Residential Sale Price Prediction" 
