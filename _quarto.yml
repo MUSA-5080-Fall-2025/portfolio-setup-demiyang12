@@ -32,6 +32,13 @@ website:
             text: "Assignment 1: Census Data Explorations"
           - href: assignments/assignment_2/assignment2_SpatialAnalysisAndVisualization.qmd
             text: "Assignment 2: Spatial Analysis and Visualization"
+      - text: "Mid-term"
+        menu: 
+          - href: midterm/appendix/
+            text: "Appendix: Residential Sale Price Prediction" 
+          - href: midterm/slides/Yuqing(Demi)_Yang_Presentation.qmd
+            text: "Slides: Residential Sale Price Prediction" 
+          
 format:
   html:
     theme: cosmo

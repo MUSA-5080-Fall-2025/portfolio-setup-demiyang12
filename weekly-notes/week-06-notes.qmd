@@ -1,0 +1,21 @@
+---
+title: "Week 6 Notes - Machine Learning & Advanced Regression"
+date: "2025-10-14"
+---
+
+## Key Concepts Learned
+
+### Build a Baseline Model
+
+## Coding Techniques
+
+###sf Package
+
+## Questions & Challenges
+- The accurate and best steps of using these data
+
+## Connections to Policy
+- Algorithms help a lot in policy decisions
+
+## Reflection
+- Finally knew why this course is called “Public Policy Analysis”...
