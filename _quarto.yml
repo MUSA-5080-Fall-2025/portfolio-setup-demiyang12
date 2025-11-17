@@ -32,6 +32,8 @@ website:
             text: "Assignment 1: Census Data Explorations"
           - href: assignments/assignment_2/assignment2_SpatialAnalysisAndVisualization.qmd
             text: "Assignment 2: Spatial Analysis and Visualization"
+          - href: assignments/assignment_4/assignment4_Assignment4_SpatialPredictiveAnalysis.qmd
+            text: "Assignment 4: Spatial Predictive Analysis"
       - text: "Mid-term"
         menu: 
           - href: midterm/appendix/Yuqing_Yang_appendix.qmd

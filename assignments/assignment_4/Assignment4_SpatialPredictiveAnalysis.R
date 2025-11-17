@@ -1,0 +1,1329 @@
+---
+title: "Predictive Policing - Technical Implementation"
+subtitle: "Exploring Burglaries Patterns in Chicago and Predictive Modeling with 311 Data"
+author: "Yuqing(Demi) Yang"
+date: today
+format:
+  html:
+    code-fold: show
+    code-tools: true
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    theme: cosmo
+    embed-resources: true
+editor: visual
+execute:
+  warning: false
+  message: false
+---
+
+## Assignment Overview
+
+In this lab, you will apply the spatial predictive modeling techniques demonstrated in the class exercise to a 311 service request type of your choice. You will build a complete spatial predictive model, document your process, and interpret your results.
+
+### Timeline & Deliverables
+
+**Due Date:** November 17, 2025, 10:00AM
+
+**Deliverable:** One rendered document, posted to your portfolio website.
+
+### Learning Goals
+
+By completing this assignment, you will demonstrate your ability to:
+
+-   Adapt example code to analyze a new dataset
+-   Build spatial features for predictive modeling
+-   Apply count regression techniques to spatial data
+-   Implement spatial cross-validation
+-   Interpret and communicate model results
+-   Critically evaluate model performance
+
+------------------------------------------------------------------------
+
+# Step 0: Set Up
+
+```{r}
+#| message: false
+#| warning: false
+
+# Load required packages
+library(tidyverse)      # Data manipulation
+library(sf)             # Spatial operations
+library(here)           # Relative file paths
+library(viridis)        # Color scales
+library(terra)          # Raster operations (replaces 'raster')
+library(spdep)          # Spatial dependence
+library(FNN)            # Fast nearest neighbors
+library(MASS)           # Negative binomial regression
+library(patchwork)      # Plot composition (replaces grid/gridExtra)
+library(knitr)          # Tables
+library(kableExtra)     # Table formatting
+library(classInt)       # Classification intervals
+library(here)
+
+# Spatstat split into sub-packages
+library(spatstat.geom)    # Spatial geometries
+library(spatstat.explore) # Spatial exploration/KDE
+
+# Set options
+options(scipen = 999)  # No scientific notation
+set.seed(5080)         # Reproducibility
+
+# Create consistent theme for visualizations
+theme_default <- function(base_size = 11) {
+  theme_minimal(base_size = base_size) +
+    theme(
+      plot.title = element_text(face = "bold", size = base_size + 1),
+      plot.subtitle = element_text(color = "gray30", size = base_size - 1),
+      legend.position = "right",
+      panel.grid.minor = element_blank(),
+      axis.text = element_blank(),
+      axis.title = element_blank()
+    )
+}
+
+# Set as default
+theme_set(theme_default())
+
+cat("✓ All packages loaded successfully!\n")
+
+```
+
+# Step 1: Getting the Data
+
+## 1.1 Load Chicago Spatial Data
+
+```{r}
+#| message: false
+#| warning: false
+#| results: hide
+#| 
+# Load police districts (used for spatial cross-validation)
+policeDistricts <- 
+  st_read("https://data.cityofchicago.org/api/geospatial/24zt-jpfn?method=export&format=GeoJSON") %>%
+  st_transform('ESRI:102271') %>%
+  dplyr::select(District = dist_num)
+
+# Load police beats (smaller administrative units)
+policeBeats <- 
+  st_read("https://data.cityofchicago.org/api/geospatial/n9it-hstw?method=export&format=GeoJSON") %>%
+  st_transform('ESRI:102271') %>%
+  dplyr::select(Beat = beat_num)
+
+# Load Chicago boundary
+chicagoBoundary <- 
+  st_read("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/Chapter5/chicagoBoundary.geojson") %>%
+  st_transform('ESRI:102271')
+
+cat("  - Police districts:", nrow(policeDistricts), "\n")
+cat("  - Police beats:", nrow(policeBeats), "\n")
+```
+
+## 1.2 Load 311 Rodent Baiting Data
+
+```{r}
+#| message: false
+#| warning: false
+#| results: hide
+
+rb <- read_csv("data/311_Service_Requests_-_Rodent_Baiting_-_Historical_20251114.csv")
+head(rb)
+
+rb_sf <- rb %>%
+  filter(!is.na(Latitude), !is.na(Longitude)) %>% 
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>% 
+  st_transform("ESRI:102271")  
+
+rb_sf <- rb_sf %>% 
+  filter(st_within(., chicagoBoundary, sparse = FALSE))
+
+# filter 2017 data
+rb_sf$CreationDate <- as.Date(rb_sf$`Creation Date`, format = "%m/%d/%Y")
+rb_sf_2017 <- rb_sf %>% 
+  filter(format(CreationDate, "%Y") == "2017")
+
+```
+
+## 1.3 Load Burglary Data
+
+```{r}
+#| message: false
+#| warning: false
+#| results: hide
+#| 
+# Load from provided data file (downloaded from Chicago open data portal)
+burglaries <- st_read("data/burglaries.shp") %>% 
+  st_transform('ESRI:102271')
+
+# Check the data
+cat("  - Number of burglaries:", nrow(burglaries), "\n")
+cat("  - CRS:", st_crs(burglaries)$input, "\n")
+
+```
+
+## 1.4 Visualize Point Data
+
+### 1.4.1 Rodent Baiting Data
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+# Simple point map for Rodent Baiting
+p1 <- ggplot() + 
+  geom_sf(data = chicagoBoundary, fill = "gray95", color = "gray60") +
+  geom_sf(data = rb_sf_2017, color = "#d62828", size = 0.1, alpha = 0.4) +
+  labs(
+    title = "Rodent Baiting 311 Service Requests",
+    subtitle = paste0("Chicago, n = ", nrow(rb_sf_2017))
+  )
+
+# Density surface using 311 Rodent Baiting data
+p2 <- ggplot() + 
+  geom_sf(data = chicagoBoundary, fill = "gray95", color = "gray60") +
+  geom_density_2d_filled(
+    data = data.frame(st_coordinates(rb_sf_2017)),
+    aes(X, Y),
+    alpha = 0.7,
+    bins = 8
+  ) +
+  scale_fill_viridis_d(
+    option = "plasma",
+    direction = -1,
+    guide = "none"
+  ) +
+  labs(
+    title = "Density Surface",
+    subtitle = "Kernel density estimation of Rodent Baiting Requests"
+  )
+
+# Combine plots using patchwork
+p1 + p2 + 
+  plot_annotation(
+    title = "Spatial Distribution of Rodent Baiting 311 Requests in Chicago",
+    tag_levels = "A"
+  )
+
+```
+
+-   The maps above show the spatial distribution of Rodent Baiting 311 requests across Chicago.\
+-   The point map on the left illustrates the raw locations of all reported rodent issues. The large number of points makes the overall pattern dense, but we can still see clear clusters in the northern and western parts of the city.\
+-   The density map on the right provides a smoother view of these patterns. Several strong hotspots emerge, especially in the Northwest Side and Near North areas. In contrast, the southern and far southwestern parts of Chicago show much lower intensity.
+
+## 1.4.2 Burgalaries Data
+
+```{r}
+# Simple point map for Burglaries (P3)
+p3 <- ggplot() + 
+  geom_sf(data = chicagoBoundary, fill = "gray95", color = "gray60") +
+  geom_sf(data = burglaries, color = "#003f5c", size = 0.15, alpha = 0.5) +
+  labs(
+    title = "Residential Burglaries",
+    subtitle = paste0("Chicago, n = ", nrow(burglaries))
+  )
+
+# Density surface for Burglaries (P4)
+p4 <- ggplot() + 
+  geom_sf(data = chicagoBoundary, fill = "gray95", color = "gray60") +
+  geom_density_2d_filled(
+    data = data.frame(st_coordinates(burglaries)),
+    aes(X, Y),
+    alpha = 0.7,
+    bins = 8
+  ) +
+  scale_fill_viridis_d(
+    option = "plasma",
+    direction = -1,
+    guide = "none"
+  ) +
+  labs(
+    title = "Density Surface",
+    subtitle = "Kernel density estimation of Residential Burglaries"
+  )
+
+# Combine P3 & P4
+p3 + p4 +
+  plot_annotation(
+    title = "Spatial Distribution of Residential Burglaries in Chicago",
+    tag_levels = "A"
+  )
+
+```
+
+# Step 2: Fishnet Grid Creation
+
+## 2.1 Create Fishnet Grid
+
+```{r}
+# Create 500m x 500m grid
+fishnet <- st_make_grid(
+  chicagoBoundary,
+  cellsize = 500,  # 500 meters per cell
+  square = TRUE
+) %>%
+  st_sf() %>%
+  mutate(uniqueID = row_number())
+
+# Keep only cells that intersect Chicago
+fishnet <- fishnet[chicagoBoundary, ]
+
+# View basic info
+cat("  - Number of cells:", nrow(fishnet), "\n")
+cat("  - Cell size:", 500, "x", 500, "meters\n")
+cat("  - Cell area:", round(st_area(fishnet[1,])), "square meters\n")
+```
+
+## 2.2 Aggregate data to Grid
+
+```{r}
+# Spatial join: which cell contains each rodent baiting request/burglaries?
+
+rodent_fishnet <- st_join(rb_sf_2017, fishnet, join = st_within) %>%
+  st_drop_geometry() %>%
+  group_by(uniqueID) %>%
+  summarise(countRodent = n(), .groups = "drop")
+
+burglary_fishnet <- st_join(burglaries, fishnet, join = st_within) %>%
+  st_drop_geometry() %>%
+  group_by(uniqueID) %>%
+  summarise(countBurglaries = n(), .groups = "drop")
+
+# Join back to fishnet (cells with 0 requests will be NA)
+
+fishnet <- fishnet %>%
+  left_join(rodent_fishnet,   by = "uniqueID") %>%
+  left_join(burglary_fishnet, by = "uniqueID") %>%
+  mutate(
+    countRodent     = tidyr::replace_na(countRodent, 0),
+    countBurglaries = tidyr::replace_na(countBurglaries, 0)
+  )
+```
+
+-   Summary statistics for Rodent baiting request
+
+```{r}
+
+print(summary(fishnet$countRodent))
+cat("\nCells with zero rodent requests:",
+    sum(fishnet$countRodent == 0), "/",
+    nrow(fishnet), "(",
+    round(100 * sum(fishnet$countRodent == 0) / nrow(fishnet), 1), "% )\n")
+```
+
+-   Summary statistics for Burglary
+
+```{r}
+
+print(summary(fishnet$countBurglaries))
+cat("\nCells with zero burglaries:",
+    sum(fishnet$countBurglaries == 0), "/",
+    nrow(fishnet), "(",
+    round(100 * sum(fishnet$countBurglaries == 0) / nrow(fishnet), 1), "% )\n")
+```
+
+## 2.3 Visualize Rodent Baiting with fishnet
+
+```{r}
+
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = countRodent), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_c(
+    name   = "Rodent Baiting Requests",
+    option = "plasma",
+    trans  = "sqrt",
+    breaks = c(0, 5, 10, 20, 40, 80, 180),
+    limits = c(0, 180), 
+    oob    = scales::squish
+  ) +
+  labs(
+    title = "Rodent Baiting 311 Requests by Grid Cell",
+    subtitle = "500m x 500m cells, Chicago,2017"
+  ) +
+  theme_default()
+
+quant_rb <- tibble(
+  Percentile = c("0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"),
+  Value = quantile(fishnet$countRodent, probs = seq(0,1,0.1))
+)
+
+knitr::kable(
+  quant_rb,
+  caption = "Quantile Distribution of Rodent Baiting 311 Request Counts"
+)
+
+
+```
+
+-   Most grid cells have very low request counts. According to the quantile table, 30% of the cells have 3 or fewer requests, and 50% have 11 or fewer.\
+-   This pattern shows a strong **right-skewed distribution**, where a small number of hotspots generate many more requests than the rest of the city.\
+-   On the map, hotspots appear mainly in the **central and north neighborhoods**, forming clear clusters of higher counts, and suggesting strong spatial heterogeneity.
+
+## 2.4 Visualize Burgalaries with fishnet
+
+```{r}
+
+# Burglary 500m x 500m grid map
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = countBurglaries), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_c(
+    name   = "Residential Burglaries",
+    option = "plasma",
+    trans  = "sqrt",
+    breaks = c(0, 1, 2, 3, 5, 8, 40),
+    limits = c(0, 40),
+    oob    = scales::squish
+  ) +
+  labs(
+    title = "Residential Burglaries by Grid Cell",
+    subtitle = "500m x 500m cells, Chicago, 2017"
+  ) +
+  theme_default()
+
+quant_burglary <- tibble(
+  Percentile = c("0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"),
+  Value = quantile(fishnet$countBurglaries, probs = seq(0, 1, 0.1), na.rm = TRUE)
+)
+
+knitr::kable(
+  quant_burglary,
+  caption = "Quantile Distribution of Residential Burglary Counts"
+)
+
+
+```
+
+# Step 3: Spatial Features
+
+## 3.1 k-nearest neighbor
+
+```{r}
+
+# 1. Get centroid coordinates
+fishnet_coords <- st_coordinates(st_centroid(fishnet))
+
+# 2. Compute nearest 8 neighbors (to other grid cells)
+knn_result <- get.knn(fishnet_coords, k = 8)
+
+# 3. Add KNN features to fishnet
+fishnet <- fishnet %>%
+  mutate(
+    knn_mean = rowMeans(matrix(countRodent[knn_result$nn.index], nrow = nrow(fishnet))),
+    knn_sum  = rowSums(matrix(countRodent[knn_result$nn.index],  nrow = nrow(fishnet)))
+  )
+
+summary(fishnet$knn_mean)
+summary(fishnet$knn_sum)
+
+
+```
+
+-   I calculated the **summary and mean values of neighboring grid cells** instead of the distance nearest event points. This method captures spatial spillover between neighborhoods better, providing stronger and more reliable predictive power.
+
+## 3.2 Distance to Hot Spots
+
+### 3.2.1 Perform Local Moran's I analysis
+
+```{r}
+# Function to calculate Local Moran's I
+calculate_local_morans <- function(data, variable, k = 5) {
+  
+  # Create spatial weights based on k-nearest neighbors
+  coords <- st_coordinates(st_centroid(data))
+  neighbors <- knn2nb(knearneigh(coords, k = k))
+  weights <- nb2listw(neighbors, style = "W", zero.policy = TRUE)
+  
+  # Calculate Local Moran's I
+  local_moran <- localmoran(data[[variable]], weights)
+  
+  # Classify clusters
+  mean_val <- mean(data[[variable]], na.rm = TRUE)
+  
+  data %>%
+    mutate(
+      local_i = local_moran[, 1],
+      p_value = local_moran[, 5],
+      is_significant = p_value < 0.05,
+      
+      moran_class = case_when(
+        !is_significant ~ "Not Significant",
+        local_i > 0 & .data[[variable]] > mean_val ~ "High-High",
+        local_i > 0 & .data[[variable]] <= mean_val ~ "Low-Low",
+        local_i < 0 & .data[[variable]] > mean_val ~ "High-Low",
+        local_i < 0 & .data[[variable]] <= mean_val ~ "Low-High",
+        TRUE ~ "Not Significant"
+      )
+    )
+}
+
+# Apply to rodent baiting counts
+fishnet <- calculate_local_morans(fishnet, "countRodent", k = 5)
+
+```
+
+### 3.2.2 Visualize Morans
+
+```{r}
+
+#| fig-width: 8
+#| fig-height: 6
+
+# Visualize Local Moran's I clusters for rodent baiting
+ggplot() +
+  geom_sf(
+    data = fishnet, 
+    aes(fill = moran_class), 
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = c(
+      "High-High"       = "#d7191c",  # hotspots
+      "High-Low"        = "#fdae61",
+      "Low-High"        = "#abd9e9",
+      "Low-Low"         = "#2c7bb6",  # cold spots
+      "Not Significant" = "gray90"
+    ),
+    name = "Cluster Type"
+  ) +
+  labs(
+    title = "Local Moran's I: Rodent Baiting Clusters",
+    subtitle = "High-High = Hot spots of rodent activity"
+  ) +
+  theme_default()
+
+```
+
+-   **Why there is no "Low-Low" and "High-Low" clusters?**
+    -   The data shows a highly right-skewed distribution.\
+    -   When high-value areas are clustered together, they are very likely to be identified as High-High (hotspot).\
+    -   Low-value areas are everywhere, so "low + low + low" is too "normal" for the tests. As a result, it will not be marked as significantly "Low-Low", but rather "Not Significant".
+    -   In the reality, rodent activity is concentrated in a small number of hotspots, while low counts are widespread across the city.
+
+### 3.2.3 Distance to Hotspots
+
+```{r}
+
+# Get centroids of "High-High" cells (rodent hotspots)
+hotspots <- fishnet %>%
+  filter(moran_class == "High-High") %>%
+  st_centroid()
+
+# Calculate distance from each cell to nearest rodent hotspot
+if (nrow(hotspots) > 0) {
+  fishnet <- fishnet %>%
+    mutate(
+      dist_to_hotspot = as.numeric(
+        st_distance(st_centroid(fishnet), hotspots %>% st_union())
+      )
+    )
+  
+
+  cat("  - Number of hot spot cells:", nrow(hotspots), "\n")
+} else {
+  fishnet <- fishnet %>%
+    mutate(dist_to_hotspot = 0)
+  cat("⚠ No significant rodent baiting hot spots found\n")
+}
+
+```
+
+## 3.3 Building Age
+
+### 3.3.1 Building Age Feature
+
+```{r}
+#| message: false
+#| warning: false
+
+# Read building data
+
+buildings_raw <- read_csv(
+  "data/Buildings_20251115.csv",
+  col_select = c("the_geom", "YEAR_BUILT")
+)
+
+
+# Clean and calculate the building years of 2017
+buildings_sf <- buildings_raw %>%
+  filter(!is.na(YEAR_BUILT)) %>%
+  mutate(YEAR_BUILT = as.numeric(YEAR_BUILT)) %>%
+  filter(YEAR_BUILT > 0, YEAR_BUILT <= 2017) %>%
+  mutate(
+    bldg_age_2017 = 2017 - YEAR_BUILT,
+    geom = st_as_sfc(the_geom, crs = 4326)
+  ) %>%
+  st_as_sf(sf_column_name = "geom") %>%
+  st_transform('ESRI:102271')
+
+bldg_by_grid <- st_join(fishnet, buildings_sf, join = st_intersects) %>%
+  st_drop_geometry() %>%
+  group_by(uniqueID) %>%
+  summarize(
+    n_buildings     = sum(!is.na(bldg_age_2017)),
+    mean_bldg_age   = ifelse(n_buildings == 0, NA_real_,
+                             mean(bldg_age_2017, na.rm = TRUE)),
+    median_bldg_age = ifelse(n_buildings == 0, NA_real_,
+                             median(bldg_age_2017, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+fishnet <- fishnet %>%
+  left_join(bldg_by_grid, by = "uniqueID")
+
+```
+
+### 3.3.2 Visualize Building Age
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = mean_bldg_age), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_c(
+    name   = "Mean building age (years)",
+    option = "magma",
+    direction = -1 ,
+    na.value = "grey90"
+  ) +
+  labs(
+    title    = "Average Building Age by Grid Cell",
+    subtitle = "500m x 500m cells, Chicago, 2017"
+  ) +
+  theme_default()
+
+```
+
+## 3.4 Land Use
+
+### 3.4.1 Land Use Feature
+
+```{r}
+#| message: false
+#| warning: false
+
+# Read the zoning data
+
+zoning_raw <- read_csv(
+  "data/zoning_2016_01_20251115.csv",
+  col_select = c("the_geom", "ZONE_CLASS")
+)
+
+# Extract the letter parts of the first three characters from ZONE_CLASS
+zoning_sf <- zoning_raw %>%
+  mutate(
+    zone_prefix = substr(ZONE_CLASS, 1, 3),
+    zone_prefix = gsub("[^A-Za-z]", "", zone_prefix)
+  ) %>%
+  filter(zone_prefix != "") %>%
+  mutate(
+    zone_code = dplyr::recode(
+      zone_prefix,
+      "RS"  = "1",
+      "RT"  = "2",
+      "RM"  = "3",
+      "B"   = "4",
+      "C"   = "5",
+      "DC"  = "6",
+      "DR"  = "7",
+      "DS"  = "8",
+      "DX"  = "9",
+      "M"   = "10",
+      "PMD" = "11",
+      "PD"  = "12",
+      "T"   = "13",
+      "POS" = "14",
+      .default = NA_character_
+    ),
+    geom = st_as_sfc(the_geom, crs = 4326)
+  ) %>%
+  filter(!is.na(zone_code)) %>%
+  st_as_sf(sf_column_name = "geom") %>%
+  st_transform('ESRI:102271')
+
+zoning_sf$zone_code <- as.integer(zoning_sf$zone_code)
+
+# Calculate the mode
+mode_first <- function(x) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0) return(NA)
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# Aggregate to fishnet: One zoning type for each grid
+zoning_by_grid <- st_join(fishnet, zoning_sf, join = st_intersects) %>%
+  st_drop_geometry() %>%
+  group_by(uniqueID) %>%
+  summarize(
+    zone_prefix_dom = mode_first(zone_prefix), 
+    zone_code_dom   = mode_first(zone_code),
+    .groups = "drop"
+  )
+
+# join the zoning variable back to fishnet
+fishnet <- fishnet %>%
+  left_join(zoning_by_grid, by = "uniqueID")
+
+```
+
+### 3.4.2 Visualize Land Use
+
+```{r}
+# Create a zoning classification with complete instructions
+fishnet <- fishnet %>%
+  mutate(
+    zone_cat = factor(
+      zone_prefix_dom,
+      levels = c("RS", "RT", "RM", "B",  "C",  "DC", "DR", "DS", "DX",
+                 "M",  "PMD", "PD", "T", "POS"),
+      labels = c(
+        "RS = Residential Single-Unit District",
+        "RT = Residential Two-Flat, Townhouse and Multi-Unit District",
+        "RM = Residential Multi-Unit District",
+        "B = Business",
+        "C = Commercial",
+        "DC = Downtown Core District",
+        "DR = Downtown Residential District",
+        "DS = Downtown Service District",
+        "DX = Downtown Mixed-Use District",
+        "M = Manufacturing",
+        "PMD = Planned Manufacturing Districts",
+        "PD = Planned Development",
+        "T = Transportation",
+        "POS = Parks and Open Space"
+      )
+    )
+  )
+
+#| fig-width: 8
+#| fig-height: 6
+
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = zone_cat), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_d(
+    name   = "Zoning (dominant class)",
+    option = "turbo", 
+    na.value = "grey90"
+  ) +
+  labs(
+    title    = "Dominant Zoning Category by Grid Cell",
+    subtitle = "500m x 500m cells, Chicago"
+  ) +
+  theme_default() +
+  theme(
+    legend.key.height = unit(0.6, "cm"),
+    legend.key.width  = unit(0.6, "cm")
+  )
+
+```
+
+# Step 4: Count Regression Models
+
+## 4.1 Poisson regression
+
+### 4.1.1 Fit Poisson regression
+
+```{r}
+
+#| label: poisson-reg
+#| message: false
+#| warning: false
+#| results: hide
+
+fishnet$zone_code_dom <- as.factor(fishnet$zone_code_dom)
+
+pois_model <- glm(
+  countBurglaries ~ mean_bldg_age + zone_code_dom + dist_to_hotspot + knn_mean,
+  data = fishnet,
+  family = "poisson"
+)
+
+summary(pois_model)
+
+```
+
+### 4.1.2 Check for Overdispersion
+
+```{r}
+
+#| label: poisson-dispersion-check
+#| message: false
+#| warning: false
+
+dispersion_rb <- sum(residuals(pois_model, type = "pearson")^2) /
+                 pois_model$df.residual
+
+cat("Dispersion parameter for rodent baiting Poisson model:",
+    round(dispersion_rb, 2), "\n")
+cat("Rule of thumb: values > 1.5 indicate overdispersion.\n")
+
+if (dispersion_rb > 1.5) {
+  cat("⚠ Overdispersion detected for rodent baiting counts.\n")
+  cat("  The Poisson model is likely too restrictive.\n")
+  cat("  A Negative Binomial model is more appropriate.\n")
+} else {
+  cat("✓ Dispersion looks acceptable.\n")
+  cat("  The Poisson model may be adequate for these counts.\n")
+}
+
+```
+
+## 4.2 Fit Negative Binomial regression
+
+```{r}
+#| label: nb-reg
+#| message: false
+#| warning: false
+#| results: hide
+
+nb_model <- glm.nb(
+  countBurglaries ~ mean_bldg_age + zone_prefix_dom + dist_to_hotspot + knn_mean,
+  data = fishnet
+)
+
+summary(nb_model)
+
+```
+
+## 4.3 Compare model fit (AIC)
+
+```{r}
+#| label: compare-aic
+#| message: false
+#| warning: false
+
+model_compare <- data.frame(
+  Model = c("Poisson", "Negative Binomial"),
+  AIC   = c(AIC(pois_model), AIC(nb_model))
+)
+
+knitr::kable(model_compare, caption = "Model Comparison: Poisson vs. NB")
+
+```
+
+-   Poisson model has an **AIC of about 11869**, while the Negative Binomial model has an **AIC of about 9842**. A lower AIC means a better fit, so the **Negative Binomial model** performs much better.\
+-   This big gap suggests that the rodent baiting counts have **strong overdispersion**, meaning the variance is much higher than the mean. The Poisson model cannot handle this pattern, but the Negative Binomial model can.
+
+# Step 5: Spatial Cross-Validation
+
+## 5.1 Leave-One-Group-Out cross-validation on 2017 data
+
+```{r}
+#| message: false
+#| warning: false
+#| results: hide
+
+# Calculate which police district the centroid of the grid falls in
+fishnet_centroids <- st_centroid(fishnet) %>%
+  st_join(policeDistricts, join = st_within) %>%
+  st_drop_geometry() %>%
+  dplyr::select(uniqueID, District)
+
+# Construct a dataset for cross-validation
+fishnet_model <- fishnet %>%
+  left_join(fishnet_centroids, by = "uniqueID") %>%
+  filter(!is.na(District)) %>%
+  mutate(
+    District      = as.factor(District),
+    zone_code_dom = as.factor(zone_code_dom)
+  ) %>%
+  filter(
+    !is.na(countRodent),
+    !is.na(mean_bldg_age),
+    !is.na(zone_code_dom),
+    !is.na(knn_mean),
+    !is.na(dist_to_hotspot)
+  )
+
+# LOGO CV
+districts  <- unique(fishnet_model$District)
+cv_results <- tibble()
+
+for (i in seq_along(districts)) {
+  
+  test_district <- districts[i]
+  
+  # Divide the training set/test set
+  train_data <- fishnet_model %>% filter(District != test_district)
+  test_data  <- fishnet_model %>% filter(District == test_district)
+  
+  train_data <- train_data %>%
+    mutate(zone_code_dom = factor(zone_code_dom))
+  
+  test_data <- test_data %>%
+    mutate(zone_code_dom = factor(zone_code_dom,
+           levels = levels(train_data$zone_code_dom)))
+  
+  # Fit the NB model
+model_cv <- MASS::glm.nb(
+    countBurglaries ~ mean_bldg_age + zone_code_dom + dist_to_hotspot + knn_mean,
+    data = train_data
+  )
+  
+  # Make predictions on the test police district
+ test_data <- test_data %>%
+    mutate(
+      prediction = predict(model_cv, newdata = ., type = "response"),
+      abs_error  = abs(countRodent - prediction),
+      sq_error   = (countRodent - prediction)^2
+    )
+ 
+   test_eval <- test_data %>% filter(!is.na(prediction))
+  
+ mae  <- mean(test_eval$abs_error, na.rm = TRUE)
+ rmse <- sqrt(mean(test_eval$sq_error, na.rm = TRUE))
+  
+  # Save the result
+cv_results <- bind_rows(
+    cv_results,
+    tibble(
+      fold          = i,
+      test_district = as.character(test_district),
+      n_test        = nrow(test_eval),
+      mae           = mae,
+      rmse          = rmse
+    )
+  )
+  
+cat("  Fold", i, "/", length(districts),
+      "- District", as.character(test_district),
+      "- n_test:", nrow(test_eval),
+      "- MAE:", round(mae, 2),
+      "- RMSE:", round(rmse, 2), "\n")
+}
+
+```
+
+## 5.2 Calculate and report error metrics (MAE, RMSE)
+
+```{r}
+
+cv_sorted <- cv_results %>%
+  arrange(fold)
+
+# Table 1: local MAE and RMSE
+cv_sorted %>%
+  knitr::kable(
+    digits  = 2,
+    caption = "Leave-One-District-Out CV Results (per district)"
+  ) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+
+# Table 2: Average MAE and RMSe
+cv_summary <- cv_sorted %>%
+  summarise(
+    mean_MAE  = mean(mae,  na.rm = TRUE),
+    mean_RMSE = mean(rmse, na.rm = TRUE),
+    n_folds   = dplyr::n()
+  )
+
+cv_summary %>%
+  knitr::kable(
+    digits  = 2,
+    caption = "Average MAE and RMSE across all districts (LOGO CV)"
+  ) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+```
+
+## 5.3 Visualize error metrics
+
+```{r}
+
+cv_by_district <- cv_results %>%
+  group_by(test_district) %>%
+  summarise(
+    mae  = mean(mae,  na.rm = TRUE),
+    rmse = mean(rmse, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Merge with the police district base map
+police_cv <- policeDistricts %>%
+  mutate(District = as.character(District)) %>%
+  left_join(cv_by_district, by = c("District" = "test_district"))
+
+# RMSE spatial distribution
+ggplot(police_cv) +
+  geom_sf(aes(fill = rmse)) +
+  labs(
+    title = "LOGO CV RMSE by Police District",
+    fill  = "RMSE"
+  ) +
+  theme_minimal()
+
+# MAE spatial distribution
+ggplot(police_cv) +
+  geom_sf(aes(fill = mae)) +
+  labs(
+    title = "LOGO CV MAE by Police District",
+    fill  = "MAE"
+  ) +
+  theme_minimal()
+
+```
+
+# Step 6: Model Evaluation
+
+### 6.1 KDE baseline
+
+```{r}
+
+# 1. Extract XY coordinates of burglary points
+bur_xy <- st_coordinates(burglaries)
+
+# 2. Create a bounding window from the Chicago boundary
+win_bbox <- spatstat.geom::owin(
+  xrange = st_bbox(chicagoBoundary)[c("xmin", "xmax")],
+  yrange = st_bbox(chicagoBoundary)[c("ymin", "ymax")]
+)
+
+# 3. Create a ppp object (point pattern) for burglaries
+bur_ppp <- spatstat.geom::ppp(
+  x      = bur_xy[, 1],
+  y      = bur_xy[, 2],
+  window = win_bbox
+)
+
+# 4. Kernel density estimate for the point pattern
+#    IMPORTANT: call density.ppp(bur_ppp, ...) — no "X ="
+bur_kde <- spatstat.explore::density.ppp(
+  bur_ppp,
+  sigma = 1000   # bandwidth in meters
+)
+
+# 5. Convert KDE to raster and extract values at grid centroids
+bur_kde_raster <- raster::raster(bur_kde)
+fishnet_centroids <- st_coordinates(st_centroid(fishnet))
+
+fishnet$kde_value <- raster::extract(
+  bur_kde_raster,
+  fishnet_centroids
+)
+
+# 6. Replace NA values (outside the KDE window) with 0
+fishnet$kde_value[is.na(fishnet$kde_value)] <- 0
+```
+
+## 6.2 Final model + predictions
+
+```{r}
+
+# Fit the final NB model using all available training cells
+final_model <- glm.nb(
+  countBurglaries ~ mean_bldg_age + knn_mean + dist_to_hotspot + zone_prefix_dom,
+  data = fishnet_model
+)
+
+# Add NB predictions back to fishnet (matched by uniqueID)
+fishnet <- fishnet %>%
+  mutate(
+    prediction_nb = predict(
+      final_model,
+      newdata = fishnet_model,
+      type = "response"
+    )[match(uniqueID, fishnet_model$uniqueID)]
+  )
+
+# Normalize KDE predictions to total burglary count
+kde_sum   <- sum(fishnet$kde_value,       na.rm = TRUE)
+count_sum <- sum(fishnet$countBurglaries, na.rm = TRUE)
+
+fishnet <- fishnet %>%
+  mutate(
+    prediction_kde = (kde_value / kde_sum) * count_sum
+  )
+
+fishnet <- fishnet %>%
+  mutate(
+    error_nb      = countBurglaries - prediction_nb,
+    abs_error_nb  = abs(error_nb),
+    error_kde     = countBurglaries - prediction_kde,
+    abs_error_kde = abs(error_kde)
+  )
+
+```
+
+## 6.3 Compare Actual vs NB vs KDE
+
+```{r}
+
+#| fig-width: 12
+#| fig-height: 4
+
+# Actual counts
+p1 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = countBurglaries), color = NA) +
+  scale_fill_viridis_c(
+    name = "Count", option = "plasma", limits = c(0, 15)
+  ) +
+  labs(title = "Actual Burglaries (2017)") +
+  theme_default()
+
+# Negative Binomial predictions
+p2 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = prediction_nb), color = NA) +
+  scale_fill_viridis_c(
+    name = "Predicted", option = "plasma", limits = c(0, 15)
+  ) +
+  labs(title = "NB Model Predictions") +
+  theme_default()
+
+# KDE baseline predictions
+p3 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = prediction_kde), color = NA) +
+  scale_fill_viridis_c(
+    name = "Predicted", option = "plasma", limits = c(0, 15)
+  ) +
+  labs(title = "KDE Baseline Predictions") +
+  theme_default()
+
+# Combine the three maps
+p1 + p2 + p3 +
+  plot_annotation(
+    title = "Actual vs Predicted Burglaries",
+    subtitle = "Comparing NB Model and KDE Baseline"
+  )
+
+```
+
+## 6.4 Model performance comparison (MAE / RMSE)
+
+```{r}
+
+# Calculate MAE and RMSE for NB model and KDE baseline
+comparison <- fishnet %>%
+  st_drop_geometry() %>%
+  filter(!is.na(prediction_nb), !is.na(prediction_kde)) %>%
+  summarize(
+    model_mae  = mean(abs(countBurglaries - prediction_nb)),
+    model_rmse = sqrt(mean((countBurglaries - prediction_nb)^2)),
+    kde_mae    = mean(abs(countBurglaries - prediction_kde)),
+    kde_rmse   = sqrt(mean((countBurglaries - prediction_kde)^2))
+  )
+
+# Reshape and print the table
+comparison %>%
+  pivot_longer(
+    everything(), names_to = "metric", values_to = "value"
+  ) %>%
+  separate(metric, into = c("approach", "metric"), sep = "_") %>%
+  pivot_wider(names_from = metric, values_from = value) %>%
+  kable(
+    digits = 2,
+    caption = "Model Performance: NB vs KDE"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+## 6.5 Spatial Distribution of Prediction Errors
+
+```{r}
+#| fig-width: 12
+#| fig-height: 8
+
+# Signed error (NB)
+p_nb_err <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = error_nb), color = NA) +
+  scale_fill_gradient2(
+    name     = "Error",
+    low      = "#2166ac",
+    mid      = "white",
+    high     = "#b2182b",
+    midpoint = 0,
+    limits   = c(-10, 10)
+  ) +
+  labs(title = "NB Model: Signed Error") +
+  theme_default()
+
+# Absolute error (NB)
+p_nb_abs <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = abs_error_nb), color = NA) +
+  scale_fill_viridis_c(
+    name   = "Abs. Error",
+    option = "magma"
+  ) +
+  labs(title = "NB Model: Absolute Error") +
+  theme_default()
+
+# Signed error (KDE)
+p_kde_err <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = error_kde), color = NA) +
+  scale_fill_gradient2(
+    name     = "Error",
+    low      = "#2166ac",
+    mid      = "white",
+    high     = "#b2182b",
+    midpoint = 0,
+    limits   = c(-10, 10)
+  ) +
+  labs(title = "KDE Baseline: Signed Error") +
+  theme_default()
+
+# Absolute error (KDE)
+p_kde_abs <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = abs_error_kde), color = NA) +
+  scale_fill_viridis_c(
+    name   = "Abs. Error",
+    option = "magma"
+  ) +
+  labs(title = "KDE Baseline: Absolute Error") +
+  theme_default()
+
+# Combine 4 plots in 2×2 layout
+(p_nb_err + p_nb_abs) /
+(p_kde_err + p_kde_abs)
+```
+
+# Step7: Summary Statistics and Tables
+
+## 7.1 Model Summary Table
+
+```{r}
+
+# Lookup full zoning labels
+zoning_labels <- c(
+  "RS"  = "Residential Single-Unit District",
+  "RT"  = "Residential Two-Flat, Townhouse and Multi-Unit District",
+  "RM"  = "Residential Multi-Unit District",
+  "B"   = "Business",
+  "C"   = "Commercial",
+  "DC"  = "Downtown Core District",
+  "DR"  = "Downtown Residential District",
+  "DS"  = "Downtown Service District",
+  "DX"  = "Downtown Mixed-Use District",
+  "M"   = "Manufacturing",
+  "PMD" = "Planned Manufacturing Districts",
+  "PD"  = "Planned Development",
+  "T"   = "Transportation",
+  "POS" = "Parks and Open Space"
+)
+
+model_summary <- broom::tidy(final_model, exponentiate = TRUE) %>%
+  mutate(
+    term = dplyr::case_when(
+      term == "(Intercept)"      ~ "Intercept",
+      term == "mean_bldg_age"    ~ "Mean building age",
+      term == "knn_mean"         ~ "KNN mean burglaries (neighboring cells)",
+      term == "dist_to_hotspot"  ~ "Distance to rodent hotspot",
+
+      # Zoning coefficients: zone_prefix_domRS, zone_prefix_domRT
+      
+      grepl("^zone_prefix_dom", term) ~ paste0(
+        "Zoning: ",
+        sub("zone_prefix_dom", "", term), 
+        " (",
+        zoning_labels[sub("zone_prefix_dom", "", term)],
+        ")"
+      ),
+
+      TRUE ~ term
+    ),
+    # Round all numeric columns
+    dplyr::across(where(is.numeric), ~round(.x, 3))
+  )
+
+model_summary %>%
+  kable(
+    caption   = "Final Negative Binomial Model Coefficients (Exponentiated Rate Ratios)",
+    col.names = c("Variable", "Rate Ratio", "Std. Error", "Z", "P-Value")
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  footnote(
+    general = paste(
+      "Rate ratios > 1 indicate a positive association with burglary counts,",
+      "while rate ratios < 1 indicate a negative association.",
+      "Zoning (land use) is a categorical variable; each zoning category is interpreted",
+      "relative to the reference category (the omitted baseline level of zone_prefix_dom)."
+    )
+  )
+```
+
+## Step 3: Write Your Analysis
+
+### Critical Requirement: Explain Each Step
+
+**For each major section, you must explain in your own words:**
+
+-   **What** you are doing in that step
+-   **Why** this step is important for the analysis
+-   **What** you found or learned from the results
+
+Do not simply copy text from the example or from your AI friend. Think about the purpose of each technique and articulate it in your own words.
+
+------------------------------------------------------------------------
+
+## Step 4: Format Your Document
+
+### Formatting Requirements
+
+Your knitted HTML document should be **professional and easy to read**:
+
+#### ✓ Clean Code
+
+-   Remove unnecessary code, comments, or debugging lines
+-   Keep only essential code chunks
+-   Use `code-fold: show` in your YAML header
+
+#### ✓ Clear Structure
+
+-   Use headers to organize sections
+-   Include a table of contents
+-   Add your name and date
+
+#### ✓ Readable Text
+
+-   Ensure all text renders properly (no broken markdown)
+-   Check that headers appear as headers (not plain text)
+-   Use proper markdown formatting
+
+#### ✓ Quality Visualizations
+
+-   All plots should have titles and labels
+-   Maps should be readable
+-   Use consistent color schemes
+
+#### ✓ Professional Presentation
+
+-   Proofread for typos
+-   Remove any "Your answer here" placeholders
+-   Make sure all code runs without errors
+-   Make IT NEAT. WE GOTTA LOOK GOOD HERE.
+
+------------------------------------------------------------------------
+
+## Submission Checklist
+
+Before you submit, verify that your document includes:
+
+### Required Components
+
+-   [ ] **Introduction**: Brief description of your chosen 311 violation type and why you selected it
+-   [ ] **Data Exploration**: Maps and summary statistics of your violation data
+-   [ ] **Fishnet Grid**: Successfully created and visualized grid with aggregated counts
+-   [ ] **Spatial Features**: At least 2-3 spatial features calculated (k-NN, distance measures, etc.)
+-   [ ] **Local Moran's I**: Spatial autocorrelation analysis with interpretation
+-   [ ] **Count Regression**: Both Poisson and Negative Binomial models with comparison
+-   [ ] **Spatial Cross-Validation**: LOGO CV implemented on 2017 data with reported metrics
+-   [ ] **Temporal Validation**: 2018 data aggregated and tested with 2017 model(OPTIONAL.)
+-   [ ] **Validation Comparison**: Comparison of spatial vs. temporal validation performance
+-   [ ] **Model Comparison**: Your model vs. KDE baseline for 2018 predictions
+-   [ ] **Error Analysis**: Maps and discussion of where model performs well/poorly
+-   [ ] **Written Explanations**: Your own words explaining each step
+
+### Technical Requirements
+
+-   [ ] Document knits to HTML without errors
+-   [ ] Code is clean and well-organized
+-   [ ] All visualizations display properly
+-   [ ] Headers and formatting render correctly
+-   [ ] File is named successfully posted to your website
+
+------------------------------------------------------------------------
