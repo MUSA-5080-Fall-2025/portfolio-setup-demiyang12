@@ -211,7 +211,7 @@ p1 + p2 +
 -   The point map on the left illustrates the raw locations of all reported rodent issues. The large number of points makes the overall pattern dense, but we can still see clear clusters in the northern and western parts of the city.\
 -   The density map on the right provides a smoother view of these patterns. Several strong hotspots emerge, especially in the Northwest Side and Near North areas. In contrast, the southern and far southwestern parts of Chicago show much lower intensity.
 
-## 1.4.2 Burgalaries Data
+### 1.4.2 Burgalaries Data
 
 ```{r}
 # Simple point map for Burglaries (P3)
@@ -250,6 +250,30 @@ p3 + p4 +
   )
 
 ```
+- The maps show where residential burglaries were concentrated in Chicago.
+- The darker purple areas represent the highest concentrations of burglaries. These hot spots appear mainly in the north and south-central parts of the city.
+- Overall, the maps suggest that residential burglaries cluster in specific neighborhoods rather than occurring randomly across Chicago.
+
+## 1.5 Chapter Summary
+
+- **Load maps and boundaries of Chicago:**   
+  - This chapter loads police districts, police beats, and the city boundary.  
+  - These layers help define the study area and later allow spatial analysis.  
+  - All maps are changed into the same coordinate system so they line up correctly.
+  
+- **Load 311 Rodent Baiting data:**  
+  - This chapter loads Chicago 311 Rodent Baiting data, and keeps only records from 2017.
+  
+- **Load burglary data:**
+  - A shapefile of burglary cases is loaded.  
+  - It is also transformed into the same coordinate system.  
+  - This dataset will be compared with the rodent data later.
+  
+- **Purpose of Step 1:**
+  - Gather most of the data needed for the project.  
+  - Clean and filter the data so it is accurate and consistent.  
+  - Make basic maps to understand where events happen.
+
 
 # Step 2: Fishnet Grid Creation
 
@@ -395,6 +419,39 @@ knitr::kable(
 
 ```
 
+- Most grid cells have **very few burglaries**. From the quantiles, 50% of all cells have 2 or fewer burglary cases.  
+- The distribution is **right-skewed**. Many places have low values (0–3), while only a few places have high values.  
+- On the map, brighter colors (yellow) show where burglaries are concentrated. These hotspots appear mainly in the northern and southern parts of Chicago.  
+- The pattern suggests burglary risk is **not uniform** across the city. Instead, it clusters in specific neighborhoods, which is important for modeling and prediction.  
+
+## 2.5 Chapter Summary
+
+- **Creating the Fishnet Grid:**  
+  - This chapter created a 500m × 500m grid that covers the whole Chicago boundary.  
+  - Each grid cell gets a unique ID, which helps match spatial features later.  
+  - The grid makes it easier to compare different locations using the same unit of space.  
+  
+- **Aggregating Rodent and Burglary Data:**
+  - Each 311 rodent request and burglary point is assigned to a grid cell using a spatial join.  
+  - Then, this chapter counted how many events happen in each cell.  
+  - Cells with no events are filled with zero, so the dataset stays complete.  
+  - This step converts point data into count data, which is needed for statistical modeling.
+
+- **Mapping Rodent Baiting Counts:**
+  - The map shows clear hotspots where rodent activity is high.  
+  - The distribution is very skewed, meaning most cells have low values, but a few cells have extremely high values.  
+  - This pattern suggests strong spatial clustering.
+  
+- **Mapping Burglary Counts:**
+  - Burglary counts also show uneven spatial distribution.  
+  - Many cells have 0–3 burglaries, while only a small number of cells have high counts.  
+  - This map confirms that burglaries are not random but cluster in specific neighborhoods.
+
+- **Overall Importance of Step 2:**
+  - This chapter transforms raw point data into a structured spatial dataset.
+  - It creates the base layer (the grid) where all future variables will be attached.
+  - It also reveals important spatial patterns that guide later modeling steps.
+
 # Step 3: Spatial Features
 
 ## 3.1 k-nearest neighbor
@@ -539,10 +596,12 @@ if (nrow(hotspots) > 0) {
 
 # Read building data
 
-buildings_sf <- st_read(
-  "https://data.cityofchicago.org/resource/syp8-uezg.geojson",
-  quiet = TRUE
-) %>%
+building_sf <- st_read("data\\Building_Footprints_20251117.geojson") %>%
+  
+# buildings_sf <- st_read(
+#   "https://data.cityofchicago.org/resource/syp8-uezg.geojson",
+#  quiet = TRUE
+# ) %>%
 
 
 # Clean and calculate the building years of 2017
@@ -552,9 +611,7 @@ buildings_sf <- st_read(
   mutate(bldg_age_2017 = 2017 - year_built) %>%
   st_transform('ESRI:102271')
 
-buildings_raw <- buildings_sf
-
-bldg_by_grid <- st_join(fishnet, buildings_sf, join = st_intersects) %>%
+bldg_by_grid <- st_join(fishnet, building_sf, join = st_intersects) %>%
   st_drop_geometry() %>%
   group_by(uniqueID) %>%
   summarize(
@@ -598,6 +655,14 @@ ggplot() +
 
 ```
 
+- The map shows large differences in building age across Chicago.  
+- Newer buildings appear more often in the **central and far north** areas, where the colors are lighter.  
+- The pattern suggests that building age is not evenly distributed.Older structures cluster in certain neighborhoods, while others have more recent development.  
+- Many **burglary hotspots** appear in areas where **buildings are older**.  
+  - These locations, mainly in the north, and southeast parts of Chicago—show both high burglary counts and high building age.  
+  - Older buildings may have weaker physical security, such as outdated doors, windows, or locks.  
+  - Older neighborhoods may also have denser housing, which increases opportunities for burglary.
+
 ## 3.4 Land Use
 
 ### 3.4.1 Land Use Feature
@@ -608,10 +673,12 @@ ggplot() +
 
 # Read the zoning data
 
-zoning_sf <- st_read(
-  "https://data.cityofchicago.org/resource/dj47-wfun.geojson",
-  quiet = TRUE
-)
+# zoning_sf <- st_read(
+#  "https://data.cityofchicago.org/resource/dj47-wfun.geojson",
+#  quiet = TRUE
+# )
+
+zoning_sf <- st_read("data\\Boundaries_-_Zoning_Districts_(current)_20251117.geojson")
 
 # Extract the letter parts of the first three characters from ZONE_CLASS
 zoning_sf <- zoning_sf %>%
@@ -721,7 +788,42 @@ ggplot() +
   )
 
 ```
+-  The map shows the dominant zoning type in each 500m × 500m grid cell in Chicago.  
+- The map shows Chicago has a mixed pattern, but **residential zones** dominate most of the city.  
+- Downtown districts (DR, DS, DX) are concentrated in the central east area.  
+- Manufacturing (M, PMD) zones cluster in the southeast, and middlewest.  
+- Comparing with burglary distribution, burglary hotspots occur mostly in **residential zones**.  
+  - This makes sense because burglary is a residential crime, so it appears mainly where people live.  
+- **Manufacturing zones** have low burglary counts.  
+  - These areas have fewer homes, more industrial facilities, and lower residential density.  
+  
+## 3.5 Chapter Summary
 
+- **k-Nearest Neighbor (KNN) Feature for 311 request feature:**
+  - For every cell, this chapter found its 8 nearest neighboring cells.  
+  - Then this chapter calculated `knn_mean`, which is the average rodent request count in those neighbors, and `knn_sum`, which is the total rodent request count in those neighbors.  
+  
+- **Distance to Hot Spots Feature(Local Moran’s I):**  
+  - Each grid cell was classified into: `High–High (hotspot)`, `Low–Low`, `High–Low`, `Low–High`, or Not Significant. In practice, most significant clusters are High–High hotspots, while many low-count areas are “Not Significant” instead of Low–Low.  
+  - Then this chapter took the centroids of High–High cells and measured, for every grid cell, the distance to the nearest hotspot (`dist_to_hotspot`).  
+  - This creates a feature that shows how close each place is to intense rodent activity.  
+  
+- **Building Age Feature:**
+  - Building data was loaded from `Chicago Data Portal`, named `Building Footprints`.  
+  - This chapter cleaned the data and kept only buildings built before or in 2017, then computed building age in 2017.
+  - Then, for each grid cell, this chapter calculated:   `n_buildings`,which is this number of buildings with valid age. `mean_bldg_age`, which is the average building age. `median_bldg_age`, which is the median building age.  
+  - These values were joined back to the fishnet, so every cell has information about its building stock and age structure.  
+  
+- **Land Use Feature:**
+  - Zoning data was loaded from `Chicago Data Portal`, named `Boundaries - Zoning Districts (current)`.   
+  - This chapter aggregated the zoning data into the secondary classification of zoning classes.(reference: *https://secondcityzoning.org/zones/*)  
+  - For each cell, this chapter identified its function as its dominant zoning type.  
+  - A map of these categories shows how residential, commercial, downtown, industrial, and park areas are distributed across Chicago.  
+  
+- **Purpose of Step 3:**
+  - Step 3 builds key spatial predictor variables on top of the grid: neighborhood intensity (`knn_mean`), proximity to rodent hotspots (`dist_to_hotspot`), built environment age (`mean_bldg_age`), and land use type (`zone_code_dom`).  
+  - They are later used in the Poisson and Negative Binomial regression models as main explanatory variables.  
+ 
 # Step 4: Count Regression Models
 
 ## 4.1 Poisson regression
@@ -738,7 +840,7 @@ ggplot() +
 fishnet$zone_code_dom <- as.factor(fishnet$zone_code_dom)
 
 pois_model <- glm(
-  countBurglaries ~ mean_bldg_age + zone_code_dom + dist_to_hotspot + knn_mean,
+  countBurglaries ~ mean_bldg_age + zone_prefix_dom + dist_to_hotspot + knn_mean,
   data = fishnet,
   family = "poisson"
 )
@@ -802,12 +904,26 @@ model_compare <- data.frame(
   AIC   = c(AIC(pois_model), AIC(nb_model))
 )
 
+
 knitr::kable(model_compare, caption = "Model Comparison: Poisson vs. NB")
+
+dispersion_row <- data.frame(
+  Statistic = "Poisson Dispersion",
+  Value     = dispersion_rb
+)
+
+knitr::kable(dispersion_row, caption = "Poisson Dispersion Statistic")
+
 
 ```
 
--   Poisson model has an **AIC of about 11869**, while the Negative Binomial model has an **AIC of about 9842**. A lower AIC means a better fit, so the **Negative Binomial model** performs much better.\
--   This big gap suggests that the rodent baiting counts have **strong overdispersion**, meaning the variance is much higher than the mean. The Poisson model cannot handle this pattern, but the Negative Binomial model can.
+## 4.4 Chapter Summary
+- In this chapter, I built statistical models to explain how burglary counts change with spatial features:  
+building age, zoning, distance to rodent baiting counts hotspots, and mean values of rodent baiting counts in neighboring grid cells.  
+- Then, this chapter first fitted a Poisson regression with these variables and then checked the dispersion of the residuals. The **Poisson dispersion is about 3.47**, which is much larger than 1.5. This means the data are strongly overdispersed (variance much higher than the mean), so the Poisson model is too restrictive.  
+- To handle overdispersion, research then fitted a Negative Binomial (NB) regression with the same main predictors.This model allows **extra variance** and is better suited for these burglary counts.  
+-   Poisson model has an **AIC of about 11849**, while the Negative Binomial model has an **AIC of about 9837**. A lower AIC means a better fit, so the **Negative Binomial model** performs much better.\
+-  Overall, Step 4 shows that burglary counts are **highly overdispersed**, and that the Negative Binomial regression is the appropriate model for capturing the relationship between burglaries and the spatial features created in previous steps.
 
 # Step 5: Spatial Cross-Validation
 
@@ -969,9 +1085,35 @@ ggplot(police_cv) +
 
 ```
 
+- Prediction errors **vary strongly** across the city.  
+  - Both RMSE and MAE maps show that some police districts have much higher prediction errors than others.  
+  - The lightest areas (middle and far-north districts) have RMSE > 60 and MAE > 50, meaning the model struggles most in these regions.  
+  
+- **High-error** districts overlap with **low burglary** areas  
+  - The earlier burglary map showed that the northern parts of Chicago have very low burglary counts. These same areas now show the highest prediction errors.  
+  
+## 5.4 Chapter Summary
+
+- **Leave-One-District-Out Cross-Validation**   
+  - The resaerch used **police districts** as spatial groups for cross-validation.  
+  - For each fold: Took one district as the test set, then used all the other districts as the training set. Fitted a Negative Binomial model with the same predictors as before: `mean_bldg_age`, `zone_code_dom`, `dist_to_hotspot`, and `knn_mean`. After that, Predicted burglary counts for the test district and calculated absolute error and squared error for each grid cell.  
+  - This process was repeated for **every police district**, so each district was left out once.  
+  
+- **Error Metrics (MAE and RMSE)**  
+  - MAE (Mean Absolute Error): average size of errors.  
+  - RMSE (Root Mean Squared Error): penalizes large errors more strongly.   
+  
+- **Mapping the Errors**  
+  - These maps show that prediction accuracy is **not uniform** across the city: Some districts (**especially in the north**) have higher MAE/RMSE, meaning the model struggles there. Districts in the **central and southern hotspot areas** tend to have lower errors, where burglary patterns are stronger and easier to learn.  
+  
+- **Purpose of Step 5**  
+  - This step tests the model in a realistic spatial way: it predicts for entire **districts that were never seen in training**.
+  - It reveals where the model is reliable and where it is weak, instead of only reporting a single global fit statistic.
+  - The results show that the Negative Binomial model captures burglary patterns better in high-crime, hotspot districts, but has larger uncertainty in low-crime districts.
+
 # Step 6: Model Evaluation
 
-### 6.1 KDE baseline
+## 6.1 KDE baseline
 
 ```{r}
 
@@ -1093,6 +1235,11 @@ p1 + p2 + p3 +
 
 ```
 
+- All three maps show the same broad structure:
+higher burglary levels in the **middle north and middle south** parts of Chicago, and much lower activity in the **middle, far north and far south** part of the city.
+- The actual burglary map shows sharp, uneven hotspots. The NB model captures the broad hotspot regions and major regional contrasts, but **produces smoother predictions** because it relies on **explanatory variables** such as building age, zoning, and hotspot distance.  
+- The KDE baseline looks visually similar to the actual map, but this is expected, as KDE **simply smooths the observed data** without any modeling of underlying urban processes.
+
 ## 6.4 Model performance comparison (MAE / RMSE)
 
 ```{r}
@@ -1122,6 +1269,9 @@ comparison %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 
 ```
+
+- KDE achieves lower MAE and RMSE because it **directly smooths the observed burglary events**, essentially reproducing the spatial pattern of the actual data. This makes KDE a **strong spatial baseline** but not a predictive or explanatory model.   
+- In contrast, the Negative Binomial model aims to **explain burglary variation using built-environment and zoning characteristics**, rather than simply interpolating past events. Therefore, its higher error values are expected and do not indicate model failure. Instead, the NB model provides interpretability and generalization ability that KDE cannot offer.  
 
 ## 6.5 Spatial Distribution of Prediction Errors
 
@@ -1182,6 +1332,43 @@ p_kde_abs <- ggplot() +
 (p_kde_err + p_kde_abs)
 ```
 
+- **NB Model: Signed Error(Top-Left)**   
+  - Under-prediction happens more in major hotspot regions (especially central–south), while over-prediction appears more in low-crime northern areas.  
+  - This reflects the NB model's reliance on **built-environment variables**, which smooth the predictions and do not fully capture local spikes.  
+  
+- **NB Model: Absolute Error(Top-Right)**  
+  - Absolute errors are larger mainly in districts with very high or very low burglary counts.  
+  - High-crime areas in the south show moderate errors but not extreme ones.  
+  - The NB model handles high-crime zones better because built-environment variables explain these areas more consistently.  
+  
+- **KDE Baseline: Signed Error(Bottom-Left)**  
+  - KDE errors are much more random and noisy.  
+  - The spatial error pattern lacks structure; KDE simply smooths nearby crime counts.  
+  - This randomness reflects that **KDE is not a model**. It only uses spatial proximity and does not incorporate zoning or urban characteristics.  
+  
+- **KDE Baseline: Absolute Error(Bottom-Right)**  
+  - Absolute errors are generally smaller than NB (expected), because KDE is effectively a **smoothed version of the real data**.  
+
+- NB shows more structured errors because it predicts using **explanatory variables**. This is not a failure, it's evidence that the **NB model is capturing urban mechanisms**, not just smoothing past data.  
+
+## 6.6 Chapter Summary
+
+- **KDE Baseline:**  
+  - This chapter built a KDE (Kernel Density Estimation) surface using the burglary point pattern.  
+  - KDE acts as a **spatial baseline**: it uses only the locations of past events, without any built-environment variables.  
+
+- **Final NB Model and Predictions:**
+  - In this chapter, I fitted a final Negative Binomial model using all training cells from `fishnet_model`, including `mean_bldg_age`, `knn_mean`, `dist_to_hotspot`, `zone_prefix_dom`.  
+  - Research generated NB predictions for each grid cell and stored them as `prediction_nb`. Meanwhile, this chapter used the KDE values to create a KDE prediction `prediction_kde` for each cell.  
+  - For both approaches, compute signed error and absolute error relative to the actual burglary counts.  
+  
+- **Overall Interpretation of Step 6:**  
+  - Step 6 evaluates whether the Negative Binomial model provides reasonable and useful predictions compared to a strong spatial baseline (KDE).  
+  - Results show that:  
+    - KDE achieves slightly lower MAE/RMSE because it effectively reproduces the observed pattern by smoothing the data.  
+    - The NB model offers **interpretable, mechanism-based predictions**, linking burglary risk to building age, zoning, rodent baiting requests hotspot distance, and its neighborhood feature, even though its errors are somewhat higher.  
+  - Therefore, KDE is useful as a **benchmark for spatial clustering**, while the NB model is more valuable for understanding and explaining where and why burglaries concentrate, and for generalizing to new times or scenarios.  
+
 # Step7: Summary Statistics and Tables
 
 ## 7.1 Model Summary Table
@@ -1211,7 +1398,7 @@ model_summary <- broom::tidy(final_model, exponentiate = TRUE) %>%
     term = dplyr::case_when(
       term == "(Intercept)"      ~ "Intercept",
       term == "mean_bldg_age"    ~ "Mean building age",
-      term == "knn_mean"         ~ "KNN mean burglaries (neighboring cells)",
+      term == "knn_mean"         ~ "KNN mean (neighboring rodent baiting requests)",
       term == "dist_to_hotspot"  ~ "Distance to rodent hotspot",
 
       # Zoning coefficients: zone_prefix_domRS, zone_prefix_domRT
@@ -1246,84 +1433,18 @@ model_summary %>%
   )
 ```
 
-## Step 3: Write Your Analysis
+- **Mean building age** has a strong and significant positive effect. For each extra year of average building age in a grid cell, the expected burglary count increases by about 2%, holding other variables constant.  
 
-### Critical Requirement: Explain Each Step
+- **Manufacturing (M) and Planned Manufacturing Districts (PMD)** both have p < 0.001, and their Rate Ratio both lower than 1, meaning that burglary risk in industrial zones is much lower than in the reference zoning category.
 
-**For each major section, you must explain in your own words:**
+- **Planned development areas(PD)**(RR ≈ 0.80, p ≈ 0.015) also show lower burglary risk.
 
--   **What** you are doing in that step
--   **Why** this step is important for the analysis
--   **What** you found or learned from the results
+- **Residential Single-Unit (RS)**(RR ≈ 0.87, p ≈ 0.013) have somewhat lower burglary counts than the reference zoning.
 
-Do not simply copy text from the example or from your AI friend. Think about the purpose of each technique and articulate it in your own words.
+- Some downtown categories (DR, DS) have extreme rate ratios and huge standard errors, likely because there are very few grid cells of these types, so their coefficients should be interpreted with caution.
 
-------------------------------------------------------------------------
+## 7.2 Discussion and Limitations
 
-## Step 4: Format Your Document
+This study shows that the NB model can capture some broad burglary patterns, such as higher risk in areas with older buildings and lower risk in manufacturing zones. However, the model also has clear limitations. Some of the variables I included—such as rodent KNN and distance to rodent hotspots—were chosen somewhat loosely and do not strongly relate to burglary in the results. Because of this, the model cannot explain the sharp hotspots seen in the actual data. Overall, while the NB model offers some useful insights, its performance is restricted by both the choice of variables and the model structure, and future work should include more relevant predictors and more advanced spatial methods.
 
-### Formatting Requirements
 
-Your knitted HTML document should be **professional and easy to read**:
-
-#### ✓ Clean Code
-
--   Remove unnecessary code, comments, or debugging lines
--   Keep only essential code chunks
--   Use `code-fold: show` in your YAML header
-
-#### ✓ Clear Structure
-
--   Use headers to organize sections
--   Include a table of contents
--   Add your name and date
-
-#### ✓ Readable Text
-
--   Ensure all text renders properly (no broken markdown)
--   Check that headers appear as headers (not plain text)
--   Use proper markdown formatting
-
-#### ✓ Quality Visualizations
-
--   All plots should have titles and labels
--   Maps should be readable
--   Use consistent color schemes
-
-#### ✓ Professional Presentation
-
--   Proofread for typos
--   Remove any "Your answer here" placeholders
--   Make sure all code runs without errors
--   Make IT NEAT. WE GOTTA LOOK GOOD HERE.
-
-------------------------------------------------------------------------
-
-## Submission Checklist
-
-Before you submit, verify that your document includes:
-
-### Required Components
-
--   [ ] **Introduction**: Brief description of your chosen 311 violation type and why you selected it
--   [ ] **Data Exploration**: Maps and summary statistics of your violation data
--   [ ] **Fishnet Grid**: Successfully created and visualized grid with aggregated counts
--   [ ] **Spatial Features**: At least 2-3 spatial features calculated (k-NN, distance measures, etc.)
--   [ ] **Local Moran's I**: Spatial autocorrelation analysis with interpretation
--   [ ] **Count Regression**: Both Poisson and Negative Binomial models with comparison
--   [ ] **Spatial Cross-Validation**: LOGO CV implemented on 2017 data with reported metrics
--   [ ] **Temporal Validation**: 2018 data aggregated and tested with 2017 model(OPTIONAL.)
--   [ ] **Validation Comparison**: Comparison of spatial vs. temporal validation performance
--   [ ] **Model Comparison**: Your model vs. KDE baseline for 2018 predictions
--   [ ] **Error Analysis**: Maps and discussion of where model performs well/poorly
--   [ ] **Written Explanations**: Your own words explaining each step
-
-### Technical Requirements
-
--   [ ] Document knits to HTML without errors
--   [ ] Code is clean and well-organized
--   [ ] All visualizations display properly
--   [ ] Headers and formatting render correctly
--   [ ] File is named successfully posted to your website
-
-------------------------------------------------------------------------
