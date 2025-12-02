@@ -34,6 +34,8 @@ website:
             text: "Assignment 2: Spatial Analysis and Visualization"
           - href: assignments/assignment_4/Assignment4_SpatialPredictiveAnalysis.qmd
             text: "Assignment 4: Spatial Predictive Analysis"
+          - href: assignments/assignment_5/Assignment5_SpaceTimePrediction.qmd
+            text: "Assignment 5: Space Time Prediction"
       - text: "Mid-term"
         menu: 
           - href: midterm/appendix/Yuqing_Yang_appendix.qmd
