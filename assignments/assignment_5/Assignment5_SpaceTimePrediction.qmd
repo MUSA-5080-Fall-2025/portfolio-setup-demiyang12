@@ -180,6 +180,16 @@ comparison_df <- data.frame(
 kable(comparison_df, caption = "Comparison of Indego Q3 2024 vs Q1 2025")
 ```
 
+- The system exhibits a sharp seasonal contraction with **total ridership
+dropping by approximately 50%** (408,408 to 201,588 trips). This decline
+is disproportionately driven by the loss of leisure and casual users,
+evidenced by a drastic **76% plummet in Day Pass usage** (22,885 down to
+5,494) and a significant reduction in Round Trips. While the physical
+network remained stable (growing slightly from 261 to 265 stations), the
+data highlights a persistent user preference for **electric bikes**,
+which maintained higher usage volumes than standard bikes in both
+seasons. But it may also be affected by the fleet size of Indego.
+
 ### 2.3 Create Time Bins
 
 ```{r create_time_bins}
@@ -278,10 +288,25 @@ library(patchwork)
 daily_trips_q3_plot / daily_trips_q1_plot
 ```
 
-**Question:** What patterns do you see? How does ridership change over
-time?
+#### How does ridership change over time?
 
-We find that...
+We find that **seasonal influence is the dominant driver of ridership
+patterns**, with distinct behaviors in each quarter:  
+
+-   Q3 2024 (Summer) shows consistently high demand, fluctuating
+    between **3,000 and 5,000 daily trips**, whereas Q1 2025 (Winter)
+    sees significantly lower activity, ranging from **1,000 to 3,000
+    trips**.
+
+-   Summer ridership remains relatively **stable and flat** across July
+    through September. In contrast, Winter ridership exhibits a
+    clear **upward trend**, starting low in January and gradually
+    increasing as the season transitions toward spring in March.
+
+-   Summer displays a regular, rhythmic cycle (likely weekly commute
+    patterns), while Winter demand is highly **volatile with sharp
+    drops**, likely reflecting greater sensitivity to extreme cold or
+    precipitation events.
 
 ### 3.2 Hourly Patterns
 
@@ -324,8 +349,23 @@ hourly_trips_q1_plot <- ggplot(hourly_patterns_q1, aes(x = hour, y = avg_trips, 
 hourly_trips_q3_plot / hourly_trips_q1_plot
 ```
 
-**Question:** When are the peak hours? How do weekends differ from
-weekdays?
+#### When are the peak hours? How do weekends differ from weekdays?
+
+Based on the hourly ridership charts provided, here is the analysis of
+peak hours and day-type differences:
+
+-   There is a distinct "commuter profile" with two sharp peaks. The
+    morning peak occurs around **8:00 AM**, and the evening peak—which
+    is consistently higher—occurs around **5:00 PM (17:00)**. Instead of
+    sharp spikes, weekends show a single broad plateau where demand
+    peaks in the mid-afternoon, roughly between **12:00 PM and 4:00
+    PM**.
+
+-   Weekdays exhibit a **two-peak** distribution driven by work
+    commutes, whereas weekends follow a **bell-shaped** curve consistent
+    with leisure or errand activity. In **Summer**, weekend demand is
+    robust, with the afternoon plateau hovering near 250-300 trips per
+    hour, nearly matching weekday midday levels.
 
 ------------------------------------------------------------------------
 
@@ -389,6 +429,15 @@ ggplot() +
   ) +
   mapTheme
 ```
+
+- The map reveals that Indego stations are heavily clustered within
+Philadelphia's core, specifically in Center City and University City,
+which correspond to the highest median household income tracts.
+Conversely, the network density drops precipitously in the lower-income
+neighborhoods of North and West Philadelphia, highlighting a spatial
+disparity where bike share infrastructure is significantly more
+accessible to wealthier residents compared to those in economically
+disadvantaged areas.
 
 ### 4.3 Join Census Data to Stations
 
@@ -479,7 +528,20 @@ ggplot() +
 
 ```
 
-### 4.4Dealing with missing data
+- The code performs a **spatial data validation** check. Its main logic is
+to geometrically link every Indego bike station to its underlying US
+Census tract to inherit demographic variables (like Median Household
+Income).
+
+- The map acts as a diagnostic tool where the **Red X marks** reveal a
+"missing data" problem. These specific stations failed to match with a
+census tract, mostly because they are located on **waterfront piers** or
+inside **parks/industrial zones**—areas that are non-residential and
+therefore have no recorded "Median Household Income". These stations
+must be excluded from the predictive model because they lack the
+necessary demographic input data.
+
+### 4.4 Dealing with missing data
 
 ```{r}
 # Identify which stations to keep
@@ -611,9 +673,35 @@ weather_q1_plot <- ggplot(weather_complete_q1, aes(x = interval60, y = Temperatu
 weather_q3_plot / weather_q1_plot
 ```
 
+Based on the temperature plots, the two quarters exhibit distinct
+thermal profiles:
+
+-   Summer (Q3 2024) temperatures are consistently high and stable,
+    fluctuating regularly between **70°F and 90°F** with a slight
+    cooling trend as autumn approaches. Winter (Q1 2025) shows a
+    clear **upward warming trend**, starting with freezing lows (dipping
+    near 20°F) in January and rising to milder spring temperatures
+    (peaks near 70°F) by late March.
+
+-   The winter plot reveals sharper volatility, including a
+    notable **cold snap in late January** where temperatures plummeted
+    significantly, whereas summer follows a more predictable daily
+    cycle.
+
 ------------------------------------------------------------------------
 
 ## 6. Create Complete Space-Time Panel
+
+- This code constructs the complete **space-time panel dataset** required
+for modeling. It first aggregates raw trip data into hourly counts and
+joins this to a full grid of all possible station-hour combinations,
+ensuring that periods with no ridership are explicitly recorded
+as **zeros** rather than missing values. The dataset is then enriched
+with **temporal features** (e.g., rush hour flags), **weather data**,
+and **census demographics**, before calculating **lag
+variables** (demand from 1, 3, and 24 hours ago) to allow the model to
+use recent history as a predictor.
+
 
 ### 6.1 **2024 Q3 Complete Panel**
 
@@ -848,6 +936,17 @@ ggplot(example_station, aes(x = interval60)) +
   plotTheme
 ```
 
+- This visualization confirms the strong **temporal
+autocorrelation** inherent in bike share data. By overlaying current
+trip counts (dark blue) with demand from the previous hour and the
+previous day, we observe a distinct, repetitive daily rhythm. The close
+alignment between the "Current" trend and the "24 Hours Ago" line
+demonstrates that demand is highly cyclical, with peaks recurring at
+similar times each day. This visual evidence validates the decision to
+engineer **lag features** for the predictive model, proving that
+historical usage (particularly the previous day's pattern) is a powerful
+predictor of future demand.
+
 ------------------------------------------------------------------------
 
 ## 8. Temporal Train/Test Split
@@ -997,9 +1096,6 @@ model4_q3 <- lm(
 cat("Model 4 R-squared:", summary(model4_q3)$r.squared, "\n")
 cat("Model 4 Adj R-squared:", summary(model4_q3)$adj.r.squared, "\n")
 ```
-
-**What do station fixed effects capture?** Baseline differences in
-demand across stations (some are just busier than others!).
 
 #### Model 5: Add Rush Hour Interaction
 
@@ -1281,7 +1377,6 @@ kable(comparison_matrix,
   row_spec(4, bold = T, color = "black", background = "#e6f3ff")
 ```
 
-### 9.4 Visualize Model Comparison
 
 ```{r compare_models}
 ggplot(mae_results_q3, aes(x = reorder(Model, -MAE_q3), y = MAE_q3)) +
@@ -1297,13 +1392,49 @@ ggplot(mae_results_q3, aes(x = reorder(Model, -MAE_q3), y = MAE_q3)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-**Question:** Which features gave us the biggest improvement?
+#### Which features gave us the biggest improvement?
+
+-   MAE Value Comparison
+
+    The Winter model achieved a lower Mean Absolute Error compared to
+    the Summer model, but this numerical superiority is largely an
+    artifact of significantly lower ridership volumes rather than better
+    predictive ability. Since winter data is heavily
+    "zero-inflated"—meaning many station-hours have zero trips—the
+    absolute errors are naturally smaller, whereas the high-volume,
+    dynamic nature of summer ridership creates larger numerical
+    fluctuations that result in higher absolute error values despite the
+    summer model actually explaining more of the variance (R2 of 0.343
+    vs. 0.265).
+
+-   Temporal Patterns Difference
+
+    Temporal patterns differ markedly between the seasons, with Summer
+    displaying a more robust and predictable structure driven by a
+    consistent blend of commuting and leisure activity, which allowed
+    the model to explain 34.3% of the variance. Conversely, Winter
+    patterns are more stochastic and difficult to model (lower R2 of
+    26.5%), likely because cold-weather riding is strictly utilitarian
+    and highly sensitive to immediate, random weather events rather than
+    the reliable behavioral routines seen in warmer months.
+
+-   The most important features
+
+    In the Summer quarter, **Temporal Lags** were unequivocally the most
+    important feature, as their addition caused the model's R2 to surge
+    from a baseline of 0.112 to 0.308, proving that recent demand
+    history is the single strongest predictor of near-future activity.
+    While demographic variables added negligible value, **Station Fixed
+    Effects** served as the second most critical component, raising
+    the R2 to 0.343 by successfully capturing the intrinsic, static
+    popularity differences between high-traffic hubs and quiet
+    residential stations. 
 
 ------------------------------------------------------------------------
 
 # PART 2: Error Analysis
 
-## 1. Spatial Error Patterns
+## 10. Spatial Error Patterns
 
 ```{r spatial_errors}
 # Calculate station errors
@@ -1404,7 +1535,7 @@ grid.arrange(
   - **Station Switching:** Stations here are dense. If a station is full, a rider might walk to the next block. This makes the first station look less popular and the second station look more popular than they really are.  
   - **Abundant Travel Alternatives:** These central areas have subways, buses, and ride-shares (Uber/Lyft). If the weather is slightly bad, riders here can easily switch to other transportation. By contrast, in areas with fewer options, riders might stick to biking. 
 
-## 2. Temporal Error Patterns
+## 11. Temporal Error Patterns
 
 ```{r obs_vs_pred}
 test_q3 <- test_q3 %>%
@@ -1475,7 +1606,7 @@ ggplot(temporal_errors, aes(x = time_of_day, y = MAE, fill = day_type)) +
   - **Hidden "Unmet Demand":** The high error during rush hour suggests that our model is failing to capture "lost sales", which means people who wanted a bike but found an empty station.  
   - **Resource Focus:** We should not waste time trying to improve "Overnight" predictions since they are already excellent. All future development efforts must focus on adding features (like real-time traffic or transit delays) to fix the "PM Rush" errors.  
 
-## 3. Demographics Error Patterns
+## 12. Demographics Error Patterns
 
 ```{r errors_demographics}
 # Join demographic data to station errors
@@ -1529,11 +1660,9 @@ grid.arrange(p1, p2, p3, ncol = 3)
 
 # PART 3: Feature Engineering & model improvement
 
-Based on your error analysis, add 2-3 NEW features to improve the model:
+## 13.1 Temporal features: School calendar
 
-## 3.1 Temporal features: School calendar
-
-### 3.1.1 Add School Feature
+### 13.1.1 Add School Feature
 
 ```{r add_school_feature}
 
@@ -1560,7 +1689,7 @@ study_panel_complete_q3 <- study_panel_complete_q3 %>%
 
 ```
 
-### 3.1.2 Refresh the Split
+### 13.1.2 Refresh the Split
 
 ```{r refresh_split}
 # Re-apply the split using the same week logic as Part 8.1
@@ -1568,7 +1697,7 @@ train_q3 <- study_panel_complete_q3 %>% filter(week < 36)
 test_q3 <- study_panel_complete_q3 %>% filter(week >= 36)
 ```
 
-### 3.1.3 Build Model 6 (+School features)
+### 13.1.3 Build Model 6 (+School features)
 
 ```{r model6_school}
 train_q3 <- train_q3 %>% 
@@ -1582,7 +1711,7 @@ cat("Model 6 R-squared:", summary(model6_q3)$r.squared, "\n")
 cat("Model 6 Adj R-squared:", summary(model6_q3)$adj.r.squared, "\n") 
 ```
 
-### 3.1.4 Evaluate Model 6 (+School features)
+### 13.1.4 Evaluate Model 6 (+School features)
 
 ```{r eval_school_model}
 # Prepare Test Set Factors
@@ -1599,9 +1728,16 @@ mae_school <- mean(abs(test_q3$Trip_Count - test_q3$pred_school), na.rm = TRUE)
 cat("New Feature MAE:", round(mae_school, 3), "\n")
 cat("Did the school calendar improve the model?", ifelse(mae_school < 0.713, "YES", "NO"), "\n")
 ```
-## 3.2 Weather features: Weekend + nice weather interaction
 
-### 3.2.1 Add Weather Interaction
+#### Why school feature?
+
+- **Motivation:** We observed that prediction errors were heavily concentrated in University City and Center City, suggesting that our model was missing key drivers of demand in these student-heavy areas.  
+- **Feature Engineering:** To address this, we integrated the academic calendars of the University of Pennsylvania (UPenn) and Drexel University. We created new binary variables `is_penn_session` and `is_drexel_session` to indicate whether a given date was an active "school day" (semester in session) versus a break/holiday.  
+- **Result:** Adding this feature slightly improved the model's accuracy. Compared to Model 4 (our best-performing baseline), the Mean Absolute Error (MAE) decreased by 0.02, confirming that accounting for student population dynamics helps reduce errors in these high-demand zones.
+
+## 13.2 Weather features: Weekend + nice weather interaction
+
+### 13.2.1 Add Weather Interaction
 
 ```{r add_weather_interaction}
 # 1. Define "Nice Weather"
@@ -1617,7 +1753,7 @@ study_panel_complete_q3 <- study_panel_complete_q3 %>%
   )
 ```
 
-### 3.2.2 Refresh the Split
+### 13.2.2 Refresh the Split
 
 ```{r refresh_split_weather}
 # Train on weeks < 36, Test on weeks >= 36
@@ -1625,7 +1761,7 @@ train_q3 <- study_panel_complete_q3 %>% filter(week < 36)
 test_q3 <- study_panel_complete_q3 %>% filter(week >= 36)
 ```
 
-### 3.2.3 Build Model 7(+ Weather Interaction)
+### 13.2.3 Build Model 7(+ Weather Interaction)
 
 ```{r model_weather_interaction}
 # Ensure factors are set up (standard prep)
@@ -1650,7 +1786,7 @@ cat("Model 7 Adj R-squared:", summary(model7_q3)$r.squared, "\n")
 cat("Model 7 Adj R-squared:", summary(model7_q3)$adj.r.squared, "\n")
 ```
 
-### 3.2.4 Evaluate Model 7
+### 13.2.4 Evaluate Model 7
 
 ```{r eval_weather_model}
 # Prepare Test Set
@@ -1668,9 +1804,16 @@ cat("MAE (Schools + Weather):", round(mae_weather, 3), "\n")
 cat("Did the Weekend + nice weather interaction improve the model?", ifelse(mae_weather < 0.711, "YES", "NO"), "\n")
 ```
 
-## 3.3 Attempt for Poisson Model
+#### Why weather and weekend interaction?
 
-### 3.3.1 Build Model 8 (Poisson)
+- **Motivation:** We observed that prediction errors varied between weekdays and weekends. Furthermore, high-error zones like Center City have highly developed transit networks with many alternatives (subways, buses, ride-shares). In these areas, rider choice is highly elastic; people will easily switch to other modes if conditions aren't perfect, making bike demand very sensitive to external factors like weather.  
+- **Feature Engineering:** To capture this sensitivity, we defined a nice_weather variable representing ideal riding conditions: temperatures between 60°F and 75°F with zero precipitation. We then created an interaction term (`weekend * nice_weather`) to specifically target discretionary leisure trips that occur on sunny weekends.  
+  - Since the `nice_weather` variable is directly derived from temperature data, we removed the original Temperature variable from the final model. This was done to avoid multicollinearity, ensuring the model focuses specifically on the impact of "ideal" conditions rather than raw temperature fluctuations.  
+- **Result:** This adjustment led to a measurable improvement in accuracy. Compared to Model 4 (our best-performing baseline), the Mean Absolute Error (MAE) decreased by 0.03, demonstrating that explicitly modeling "ideal leisure conditions" captures demand spikes better than raw temperature data alone.
+
+## 13.3 Attempt for Poisson Model
+
+### 13.3.1 Build Model 8 (Poisson)
 
 ```{r}
 
@@ -1693,7 +1836,7 @@ cat("Model 8 Adj R-squared:", summary(model8_q3)$r.squared, "\n")
 cat("Model 8 Adj R-squared:", summary(model8_q3)$adj.r.squared, "\n")
 ```
 
-### 3.3.2 Evaluate Model 8
+### 13.3.2 Evaluate Model 8
 
 ```{r}
 # 1. Predict on Test Data
@@ -1772,44 +1915,100 @@ all_models_df %>%
   row_spec(which.min(all_models_df$MAE), bold = T, color = "white", background = "#3182bd")
 ```
 
-**Implementation:**
 
--   Add your features to the best model
--   Compare MAE before and after
--   Explain *why* you chose these features
--   Did they improve predictions? Where?
+#### Feature Engineering Impact
 
-**Try a poisson model for count data**
+- **Marginal Improvements:** Adding specific domain features yielded small but consistent improvements. Introducing School Calendars (Model 6) reduced the MAE from 0.713 to 0.711, and adding the Weather Interaction (Model 7) further reduced it to 0.710.  
+- **Cumulative Effect:** While individual features like "UPenn Session" or "Nice Weekends" did not drastically shift the global error, they pushed the total improvement over the baseline (Model 1) from 14.1% to 14.5%. This suggests that while these variables capture real behavioral drivers, their signal is relatively subtle compared to the dominant trends.
 
--   Does this improve model fit?
+#### Why the impact is slight?
+
+- **The "Ceiling Effect" of Lag Variables**  
+  - **Lag Redundancy:** The reason Models 6 and 7 improved performance only minimally is likely due to the strength of the Temporal Lags (Model 2). The number of trips taken "1 hour ago" or "24 hours ago" already implicitly captures the effects of weather and school schedules. (e.g., If it is raining, the `lag1Hour` variable is already low, so the model already knows demand is suppressed).  
+  - **Localized vs. Global:** Features like School Calendars primarily affect specific zones (University City). When averaging the error across all stations in Philadelphia, the improvement in those specific neighborhoods gets diluted, resulting in a small change in the system-wide MAE.
+  
+#### The Advantage of Poisson Regression
+
+- **Handling Count Data:** The most significant leap in performance came not from adding more variables, but from changing the mathematical engine. Model 8 (Poisson) achieved an MAE of 0.666, a massive drop compared to the linear models (0.710).  
+- **Solving the "Zero" Problem:** Linear regression (Models 1-7) can predict negative numbers or decimals (e.g., " -0.5 trips"), which is physically impossible. The Poisson model is designed specifically for non-negative integers. It excels at predicting the many hours where station demand is exactly zero, which constitutes a large portion of the dataset (overnight and low-demand stations).
+
+#### Pratical Recommendation
+
+- **Select Model 8:** We strongly recommend deploying the Poisson Regression (Model 8). It offers a 19.8% improvement over the baseline and is 6.8% better than the best linear model.  
+- **Reliability:** Beyond just having the lowest error, the Poisson model is operationally safer because it will never predict negative demand. This ensures that rebalancing algorithms receive valid, usable inputs for every station, every hour.
 
 # PART 4: Critical Reflection
 
-## **1. Operational implications:**
+## 14.1 Operational implications
 
--   Is your final MAE "good enough" for Indego to use?
--   When do prediction errors cause problems for rebalancing?
--   Would you recommend deploying this system? Under what conditions?
+### 14.1.1 Is your final MAE "good enough" for Indego to use?
 
-## **2. Equity considerations:**
+- **In short, it depends.**  
+- **Yes, for general planning:** The final Poisson model achieved an MAE of 0.67 trips per hour. This means, on average, the model is off by less than one bike per hour. This is highly accurate for the majority of the network.  
+- **No, for peak capacity management:** However, an "average" metric hides specific failures. In high-demand zones like Center City and University City, errors can exceed 1.5 trips per hour. During a 3-hour rush window, this creates a cumulative error of ~5 bikes, which is enough to completely empty a small docking station.  
 
--   Do prediction errors disproportionately affect certain
-    neighborhoods?
--   Could this system worsen existing disparities in bike access?
--   What safeguards would you recommend?
+### 14.1.2 When do prediction errors cause problems for rebalancing?
 
-## **3. Model limitations:**
+- **The "PM Rush" Danger Zone:** The model is least accurate during the Weekday PM Rush, where errors are highest. This is the most dangerous time for errors because:  
+  - **Traffic Constraints:** Rebalancing trucks are stuck in the same rush hour traffic as commuters. If the model makes a mistake, the operations team cannot move vehicles fast enough to fix it.  
+  - **Cascading Failures:** If the model fails to predict a surge at 5:00 PM, a station goes empty. Riders then walk to the next station, overwhelming that one too, creating a domino effect the model cannot see.
 
--   What patterns is your model missing?
--   What assumptions might not hold in real deployment?
--   How would you improve this with more time/data?
+### 14.1.3 Would you recommend deploying this system? Under what conditions?
+
+- **Recommendation: Yes**, we recommend deploying the Poisson Regression (Model 8), but with specific operational rules.  
+  - **Condition 1 - Automated vs. Manual Zones:**  
+    - **Automate Equity Zones:** The model is very accurate in lower-income and transit-dependent neighborhoods. Indego can automate rebalancing schedules for these areas to ensure reliable access.  
+    - **Monitor High-Volume Zones:** For Center City and University City, use the model as a "guide," but keep human dispatchers monitoring real-time levels during PM Rush.  
+
+  - **Condition 2: Use Poisson Only:** Do not use the linear models. The Poisson model ensures no negative predictions, which prevents the rebalancing software from crashing or suggesting impossible moves (e.g., "remove -2 bikes").
+
+## 14.2 Equity considerations
+
+### 14.2.1 Do prediction errors disproportionately affect certain neighborhoods?
+
+- Yes, but in an unexpected way: Contrary to many AI systems that fail on marginalized groups, this model is actually least accurate in wealthy, white neighborhoods.  
+- The Evidence: There is a clear positive correlation between Median Income and Prediction Error. This means the model makes its biggest mistakes in the richest parts of the city (like Rittenhouse and Center City).  
+- **The "Equity Zone" Advantage:** Conversely, the model performs significantly better (lower error) in lower-income neighborhoods and areas with higher minority populations. This is likely because ridership in these areas is more consistent and less prone to the chaotic spikes seen in tourist/business districts.
+
+### 14.2.2 Could this system worsen existing disparities in bike access?
+
+-  Even though the model works well for underserved neighborhoods, it creates a dangerous operational incentive. Operations managers might see "Red Alert" (high errors/shortages) constantly flashing in Center City and rush all the effort there to fix it.  
+- **Resource Drain:** If rebalancing teams are too focused on fixing the "unpredictable" problems in wealthy areas, they might pull resources away from lower-income neighborhoods.  
+- The Result: Equity zones might suffer from gradual neglect, and it is not because the model is wrong, but because the model's "alarms" are louder elsewhere.
+
+### 14.2.3 What safeguards would you recommend?
+
+- **Protected Resource Allocation:** Establish a "minimum fleet guarantee" for equity neighborhoods. Trucks assigned to these zones cannot be diverted to Center City, no matter how high the demand spikes there.  
+- **Different Metrics for Different Zones:**  
+  - In Center City: Optimize for Turnover (moving bikes fast).  
+  - In Equity Zones: Optimize for "Reliability" (ensuring a bike is always there).  
+- **Human Override:** Do not allow the algorithm to fully automate dispatching. A human manager must verify that "chasing demand" in high-income areas is not leaving transit-dependent neighborhoods empty.
+
+## 14.3 Model limitations
+
+### 14.3.1 What patterns is your model missing?
+
+- **"Censored" Demand (The biggest missing piece):** Our model assumes that Trip Count equals User Demand. This is false. If a station is empty, the trip count is 0, even if 10 people wanted a bike. The model interprets this as "no demand," failing to capture true interest.  
+- **Event-Driven Spikes:** The model knows where the hotspots are (University City, Center City), but it doesn't know when special events happen. It misses the massive surges caused by Phillies and Eagles games, concerts, or large conferences that cause the unpredictable errors we saw in the spatial maps.  
+- **Network Effects:** The model treats each station as a lonely island. It doesn't understand that if Station A is full, riders will overflow to Station B nearby.  
+
+### 14.3.2 What assumptions might not hold in real deployment?
+
+- **The Infinite Capacity Assumption:** The model predicts demand as if there are always bikes available. In the real world, physical capacity is limited. A prediction of "10 trips" is useless if the station only holds 5 bikes.  
+- **The Perfect Weather Forecast Assumption:**  
+  - The Assumption: Our model was trained using historical weather records (e.g., we know for a fact it rained on July 10th). It assumes that the weather data input is 100% accurate.  
+  - The Reality: In real-time deployment, we have to use weather forecasts (predictions), not historical records. Forecasts are often wrong. If the forecast says "Sunny" but it actually rains, our model will confidently predict high demand, leading to a massive operational error (sending bikes to stations where no one is riding).  
+- **The Bike Type Indifference Assumption (E-bike Preference):**  
+  - The Assumption: Our model predicts total Trip Count, treating all bikes as equal. It assumes a rider is just as happy to take a standard bike as an electric bike.  
+  - The Reality: In 2024/2025, riders heavily prefer electric bikes (E-bikes). If a station has 5 bikes but they are all heavy, non-electric classic bikes, users might skip that station and look for an E-bike elsewhere. Our model ignores the composition of the fleet and will over-predict demand for stations that only have classic bikes left.  
+- **The Perfect Fleet Health Assumption:**  
+  - The Assumption: The model assumes that if the system says a station is "Active," it is fully functional.  
+  -The Reality: In reality, vandalism, dead batteries, or flat tires are common. A station might physically have 10 bikes, but if 8 are broken (unavailable for unlock), the actual capacity is only 2. The model will predict high demand based on history, but actual ridership will be near zero because the bikes are unrideable. This "maintenance gap" is completely invisible to our current model.
+
+### 14.3.3 How would you improve this with more time/data?
+
+- **Add Real-Time Dock Status Data:** We would incorporate data on how many minutes per hour a station was empty. This would allow us to estimate "true demand" (e.g., if a station was empty for 30 minutes, we should double the observed trip count to guess the real demand).  
+- **Scrape Event Calendars:** We would build a scraper for local event websites (eg.Ticketmaster) to create a "Special Event" flag. This would significantly reduce the high errors seen in Center City.  
+- **Spatial Lag Features:** Instead of just looking at one station's history (`lag1Hour`), we would add a feature for the history of neighboring stations. This would help the model understand that high demand next door usually means high demand here soon.
 
 ------------------------------------------------------------------------
-
-1.  **Brief report** summarizing (with supporting data & visualization):
-
-    -   Your quarter and why you chose it
-    -   Model comparison results
-    -   Error analysis insights
-    -   New features you added and why
-    -   Critical reflection on deployment
