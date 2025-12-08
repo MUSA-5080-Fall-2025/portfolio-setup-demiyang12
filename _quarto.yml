@@ -44,7 +44,7 @@ website:
             text: "Slides: Residential Sale Price Prediction"
       - text: "Final"
         menu: 
-          - href: final/Appendix1207.qmd
+          - href: final/Final_appendix.qmd
             text: "Appendix: Crime Count Prediction" 
           
 format:
