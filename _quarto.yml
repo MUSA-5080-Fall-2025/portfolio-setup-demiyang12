@@ -41,7 +41,11 @@ website:
           - href: midterm/appendix/Yuqing_Yang_appendix.qmd
             text: "Appendix: Residential Sale Price Prediction" 
           - href: midterm/slides/Yuqing_Yang_Presentation.qmd
-            text: "Slides: Residential Sale Price Prediction" 
+            text: "Slides: Residential Sale Price Prediction"
+      - text: "Final"
+        menu: 
+          - href: final/Appendix1207.qmd
+            text: "Appendix: Crime Count Prediction" 
           
 format:
   html:
