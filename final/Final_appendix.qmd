@@ -928,6 +928,18 @@ p6 <- ggplot(plot_data, aes(x = Avg_Vacancy, y = log_crime)) +
 Before finalizing our model, we conducted an extensive exploratory analysis, testing relationships across multiple potential independent variables and their non-linear transformations. 
 While we only present the variables with the most significant statistical relationships and policy implications here, this rigorous process of trial and error was essential to ensure the robustness of our final model. The charts above represent the distilled 'risk signals' identified from this comprehensive screening.
 
+- `Alcohol Outlets`: The plot shows that crime goes up quickly with the first few alcohol stores. However, as the number of stores gets very high, the line flattens out **(Diminishing marginal returns)**. We will try using a **log transformation** for this feature. This tells the model that the first few stores have a bigger impact than the later ones.  
+
+- `Street Lights`: The red trend line is **not straight**. It goes up as lights increase (usually in busy areas), but then it curves. In later this study, we used a **polynomial (2nd degree) term**. This allows the model to draw a curved line instead of a straight one to fit the data better.  
+
+- `Distance to Police`: The line looks **mostly straight** and goes down slightly, so we kept this variable linear.  
+
+- `Poverty Rate`: As poverty goes up, crime generally goes up. The line is **mostly straight**. We also kept it as a **standard linear variable**.  
+
+- `Median Income`: The line looks a bit like a **"U" shape**. Crime is high in low-income areas, drops in middle-income areas, and rises slightly or stays flat in higher-income areas. We added a **squared term (^2)**. This helps the model understand that crime can be high at both low and high income levels, but low in the middle.  
+
+- `Vacancy Rate`: The line looks like an **upside-down "U"**. Crime goes up as vacancy increases, but when vacancy gets very high (empty neighborhoods), crime actually drops. We also added a squared term (^2) for this.
+
 ## 3.5 Correlation Matrix of Features for all Features
 
 ```{r}
@@ -966,7 +978,9 @@ ggcorrplot(
 
 ```
 
-如果矩阵显示它们的相关系数超过 0.7，不要把它们都放进模型！所以可以说这里没有超过0.7的，可以都放？ 另外如果后面监测到多重共线性，可以用这个矩阵决定怎么处理数据
+- The correlation matrix reveals a critical issue of multicollinearity among the socioeconomic predictors. Specifically, Average Poverty Rate (Avg_Poverty) and Median Household Income (Avg_Income) exhibit a strong negative correlation of -0.81. Additionally, Unemployment Rate (Avg_Unemployment) shows a strong negative correlation with Income (-0.70) and a moderately high positive correlation with Poverty (0.66).
+
+- These high coefficients suggest that **Poverty, Income, and Unemployment** are capturing overlapping dimensions of neighborhood socioeconomic status. While this flags a risk of multicollinearity, correlation coefficients alone are insufficient for removing variables. Therefore, we will proceed to calculate the **Variance Inflation Factor (VIF) in the next step** to rigorously quantify the severity of multicollinearity and determine the appropriate strategy for feature selection or transformation.
 
 ## 3.6 Crime distribution in weekdays and weekends
 
@@ -996,21 +1010,17 @@ ggplot(final_data, aes(x = is_weekend_factor, y = Crime_Daily_Rate, fill = is_we
   plotTheme
 ```
 
-坏了。。。。
+- **Stability of Crime Volume:** The means (indicated by white diamonds) and medians (solid black lines) for both weekdays and weekends are nearly identical, appearing at approximately the same daily average level (~0.6 incidents). This pattern suggests that the aggregate demand for public safety resources at these bus stops does not fluctuate significantly throughout the week.  
 
-**Key Findings:**
+- **Justification for Pseudo-Panel Modeling：** While this chart shows crime counts are constant, we know that generally ridership volume typically drops on weekends. If the outcome (crime) remains the same while the input (ridership) decreases, it implies that the risk intensity per rider is likely higher on weekends. Constructing a pseudo-panel allows us to mathematically capture this changing elasticity, rather than averaging it out.  
 
--   **Spatial Variation in Property Values:** The average sale price per square foot shows significant geographic clustering across census tracts, with distinct high-value areas concentrated in specific neighborhoods. This indicates strong spatial autocorrelation in housing prices, where adjacent tracts tend to have similar price levels.
-
--   **Correlation Between Property Condition and Location:** Better average interior conditions are systematically concentrated in particular geographic areas, suggesting that housing maintenance and quality are not randomly distributed but follow spatial patterns that may correlate with neighborhood characteristics and property values.
-
--   **Heterogeneous Distribution of Housing Size:** The average livable area varies substantially across census tracts, with larger properties clustered in specific regions. This spatial patterning of housing size complements the price distribution, indicating that both property characteristics and location factors contribute to the overall housing market structure in Philadelphia.
+  - By disaggregating the data into **weekday and weekend observations** for each stop, we create a pseudo-panel structure that acts as a natural control. Since the **physical environment (lighting, poverty, location) remains fixed** for a specific stop, splitting the data allows our model to **isolate ridership as the primary changing variable**, thereby enabling a more robust causal inference about how passenger flows specifically impact crime rates under different density conditions.
 
 ------------------------------------------------------------------------
 
 # Phase 4: Model Building(负二项式)
 
-## **4.1 Ridership only:**
+## 4.1 Ridership only:
 
 ```{r Model_1+Summary}
 
@@ -1022,9 +1032,9 @@ summary(model_1)
 
 ```
 
-**Coefficient Interpretation:**
+- This baseline model establishes the **fundamental relationship** between transit ridership and crime counts without any confounding factors. It serves as a benchmark to test the raw association. specifically, whether higher passenger volume acts as a "crime generator" (providing more potential targets) or a deterrent (providing "eyes on the street"). The **offset term** ensures we are modeling the rate of crime per day, accounting for differences in exposure periods.
 
-## \*\*4.2 The Interaction (核心假设)
+## 4.2 The Interaction
 
 ```{r Model_2+Summary}
 model_2 <- glm.nb(Crime_Total_Count ~ 
@@ -1034,13 +1044,9 @@ model_2 <- glm.nb(Crime_Total_Count ~
 summary(model_2)
 ```
 
-**Coefficient Interpretation:**
+- In this step, we introduce the **interaction term (Log_Ridership * is_weekend_factor)** to test our core hypothesis: does the impact of ridership on crime change fundamentally during weekends? This specification allows the model to differentiate the "commuter effect" from potentially riskier weekend dynamics. It helps us determine if a specific bus stop becomes more dangerous per rider on weekends, even if the total volume of passengers decreases.
 
--   Coefficient Evolution (vs. Model 1):
-
--   New Variable Interpretation:
-
-## **4.3 Built Environment and Demographics features:**(加入环境控制)
+## 4.3 Built Environment and Demographics features:
 
 ```{r Model_3+Summary}
 model_3 <- glm.nb(Crime_Total_Count ~ 
@@ -1057,16 +1063,13 @@ model_3 <- glm.nb(Crime_Total_Count ~
 summary(model_3)
 ```
 
-**Coefficient Interpretation:**
+- We incorporate criminogenic generators (alcohol outlets), potential guardians (street lights), and socioeconomic indicators (income, vacancy, and poverty).  
+- By adjusting for these factors, this model rigorously tests whether ridership has a unique impact on crime, or if high-ridership stops simply happen to be located in disadvantaged or commercially dense neighborhoods. This step is crucial for **isolating the specific effect** of the transit network from broader environmental conditions.
 
--   Coefficient Evolution (vs. Model 2):
-
--   New Variable (Spatial) Interpretation:
-
-## **4.4 空间固定效应:**
+## 4.4 Spatial Fixed Effect
 
 ```{r Model_4+Summary}
-# 加入 'GEOID' (Census Tract) 作为固定效应
+# 加入 'PSA' (Police Service Area) 作为固定效应
 # 这相当于为费城每一个普查区都加了一个“基准拦截”，控制了所有观测不到的社区特征
 model_4 <- glm.nb(Crime_Total_Count ~ 
                     Log_Ridership * is_weekend_factor + 
@@ -1084,7 +1087,10 @@ model_4 <- glm.nb(Crime_Total_Count ~
 summary(model_4)
 ```
 
-## Model 5 crime temporal lag
+- In this robust specification, we introduce **Police Service Area (PSA)** fixed effects to control for unobserved spatial heterogeneity. Unlike census tracts, PSAs are directly relevant to law enforcement strategy, allowing the model to account for differences in patrolling intensity and reporting practices across different police districts. This approach not only improves model fit but also resolves potential overfitting issues associated with smaller spatial units.
+
+## 4.5 Crime Temporal Lag
+
 ```{r Model_5+Summary}
 # 加入警局距离，并加入 'GEOID' (Census Tract) 作为固定效应
 # 这相当于为费城每一个普查区都加了一个“基准拦截”，控制了所有观测不到的社区特征
@@ -1105,54 +1111,24 @@ model_5 <- glm.nb(Crime_Total_Count ~
 summary(model_5)
 ```
 
-在加入geoid前，aic等于77655，morans i约等于0.5；加入geoid之后，aic等于74009，morans i 约等于0.29，并且只有其他一个其他变量Avg_Poverty从显著变成了不显著。
-GEOID 的作用： 当你放入factor(GEOID)，模型就已经知道了“这个区是贫困区”。
-如果变量变得不显著： 说明这个变量对犯罪的影响，已经被 GEOID 这个“大标签”完全解释掉了。
-如果其他变量依然显著： 这才是最牛的地方！说明像 客流 (Ridership)、路灯、酒铺这些变量，即使在控制了社区背景后，依然对犯罪有独立的、显著的影响。
-
-而且我觉得用census tract可能是最能降morans i的了，其他空间区分方式（比如警区）更是很大一块
-
-总体看来很需要加入geoid作为固定项。AIC 下降 3000 是硬道理，说明模型拟合度极佳。变量显著性稳定，说明模型结构健康。Moran's I 的0.29虽然不完美，但在实际应用类项目中是可以容忍的（你可以说这是 limitations）。
-
-如何解释那个不显著的变量？
-在结果表格里，如实汇报它变得不显著。
-解释为：“该变量的影响已被社区固定效应所包含（Captured by neighborhood fixed effects）。”
-
+- The last model incorporates a temporal lag (Log_Crime_Rate_lag), accounting for the historical "stickiness" of crime hotspots. By controlling for **past crime** alongside spatial fixed effects, this model offers the most rigorous test, correcting for both spatial dependence and serial correlation.
 
 ```{r VIF Validation}
 vif(model_5)
 ```
 
-其实在加入geoid做固定效应之后，vif变得很屎（看第二列的平方值），但是log ridership还行（1.53^2=2.3）。
-多重共线性（High VIF）的主要后果是让相关变量的系数变得不稳定（方差变大，导致显著性消失）。在你的模型里，Light_Count 和 GEOID 打架，导致路灯的系数废了。但是，Log_Ridership 没有参与这场架（它的 VIF 很低）。
+- A diagnostic check for multicollinearity in Model 5 revealed significant redundancy among the socioeconomic variables. Specifically, Median Income (`Avg_Income`) exhibited an extremely high Generalized VIF score of 9.92, indicating strong collinearity with Poverty Rate (`Avg_Poverty`). Including both variables introduces noise and destabilizes coefficient estimates, as they essentially measure the same underlying concept of economic disadvantage.  
+- Consequently, in the transition to Model 6 (Refined Model), we removed `Avg_Income` and its quadratic term, retaining `Avg_Poverty` as the primary proxy for socioeconomic status due to its stronger theoretical link to crime risk in urban literature. Additionally, we simplified the Street Lights variable from a polynomial to a linear term (`Light_Count`). Given that the model includes robust spatial fixed effects (`PSA_ID`), the complex non-linear variation is already largely absorbed by the spatial controls, making a linear specification for infrastructure more parsimonious and interpretable.
 
-只要核心变量不共线，且模型设定正确（AIC 降低证明了这一点），你对 Log_Ridership 的系数估计依然是无偏且有效的。
-
-以前的解释（不加 GEOID）：
-“客流高的站点犯罪率高，但我们不确定是因为客流本身，还是因为这些站点恰好都在贫民窟或治安差的区域。”
-
-现在的解释（加了 GEOID）：
-“我们在同一个普查区（Census Tract）内部进行了比较。即便是在同一个社区、面临同样的贫困水平和同样的警力管辖下，那个客流更大的站点，依然比它隔壁客流小的站点有更高的犯罪风险。”
-
-对于不显著的变量，就简单报告：加入了建成环境（路灯、酒铺）作为控制变量，并加入了社区固定效应以消除偏差。虽然这些变量吸收了空间变异，但我们的核心关注点依然是客流带来的稳健影响……
-
-
-## Model6 比model5减去income
+## 4.6 Refine Model 5 and Create Final Model
 ```{r model6+summary}
 
 model_6 <- glm.nb(Crime_Total_Count ~ 
                              Log_Ridership * is_weekend_factor + 
                              log(Alcohol_Count + 1) +
                              Light_Count +
-                             
-                             # --- 核心修改 ---
-                             # 保留贫困率
                              Avg_Poverty +   
-                             
-                             # 删除了 Avg_Income 和 I(Avg_Income^2）
-                             # 检查空置率：如果平方项不显著，也可以删掉平方项只留 Avg_Vacancy
                              Avg_Vacancy + I(Avg_Vacancy^2) + 
-                             
                              Avg_Unemployment +
                              Dist_Police +
                              factor(PSA_ID) + 
@@ -1167,72 +1143,11 @@ vif(model_6)
 
 ```
 
+- After removing the conflicting income variables, Model 6 is now statistically healthy. Most importantly, our core variable, `Log_Ridership`, has a very low GVIF score of 2.13. This is well below the concern threshold (usually 5 or 10), which proves that our main finding that ridership drives crime, is reliable and not distorted by other factors.  
+- High scores for Vacancy and the Interaction term are mathematically expected when we use squared terms (like Vacancy^2) or interactions. They do not negatively affect the model's ability to predict crime.
 
-## **4.5 输出对比表格**
+## 4.7 Model Comparison Plot
 
-```{r eval = FALSE}
-# 1. 加载必要的包
-library(modelsummary)
-library(ggplot2)
-library(dplyr)
-
-# 2. 定义变量名的“美化映射” (跟 Stargazer 的 label 对应)
-coef_map_list <- c(
-  "Log_Ridership" = "Ridership (Log)",
-  "is_weekend_factorWeekend" = "Weekend Effect",
-  "Log_Ridership:is_weekend_factorWeekend" = "Interaction: Ridership × Weekend",
-  
-  # --- 环境变量 ---
-  "log(Alcohol_Count + 1)" = "Alcohol Outlets", 
-  
-  # --- 路灯 (兼容 model_6 的线性项和旧模型的二次项) ---
-  "Light_Count" = "Street Lights (Linear)",       # Model 6 用
-  "poly(Light_Count, 2)1" = "Street Lights (Poly 1)", # Model 5 用
-  "poly(Light_Count, 2)2" = "Street Lights (Poly 2)", # Model 5 用
-  
-  # --- 社会经济 (model_6 去掉了 Income) ---
-  "Avg_Poverty" = "Poverty Rate",
-  "Avg_Vacancy" = "Vacancy Rate",
-  "I(Avg_Vacancy^2)" = "Vacancy Rate (Squared)",
-  
-  # --- 政策变量 ---
-  "Dist_Police" = "Dist to Police Station",
-  
-  # --- 滞后项 ---
-  "log(Crime_Daily_Rate_lag + 0.001)" = "Temporal Lag (Prev. Quarter)"
-)
-
-# 3. 绘制系数图
-p_models <- modelplot(
-  list(
-    "1. Naive" = model_1, 
-    # "3. Context" = model_3, # 可以根据需要保留或注释掉旧模型
-    "5. Robust (PSA)" = model_5,   # 含 Income 和 Poly Lights
-    "6. Final (Refined)" = model_6 # ⭐ 你的最终模型 (无 Income, 线性路灯)
-  ),
-  coef_map = coef_map_list, 
-  conf_level = 0.95
-) +
-  # --- 美化代码 ---
-  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
-  labs(
-    title = "What Drives Crime Risk?",
-    subtitle = "Model Evolution: Comparing Robust (M5) vs. Final Refined (M6)",
-    x = "Effect Size (Coefficient Estimate)",
-    y = "",
-    caption = "Note: Model 6 removes collinear Income variables and simplifies Street Lights to a linear term."
-  ) +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(face = "bold", size = 14),
-    axis.text.y = element_text(size = 11, face = "bold")
-  )
-
-# 展示图形
-p_models
-```
 ```{r}
 # --- Phase 4.5: Model Comparison Plot (Corrected) ---
 
@@ -1305,111 +1220,25 @@ p_comparison <- modelplot(
 p_comparison
 ```
 
-```{r}
-library(dplyr)
-library(ggplot2)
-library(knitr)
-library(kableExtra)
+- This plot visualizes our journey from a naive baseline to a robust final model. When reading this chart:  
+  - **Distance from Red Line:** The further the dot is to the right, the stronger the positive impact on crime.  
+  - **Length of the Line:** This represents the Confidence Interval. A longer line means higher uncertainty, often caused by multicollinearity.
 
-# --- 1. 提取系数和方差协方差矩阵 ---
-# 我们需要手动计算周末的斜率标准误 (Standard Error)，公式是 Var(A+B) = Var(A) + Var(B) + 2Cov(A,B)
+- **Model 1(Ridership Only):** Without controlling for any other factors, ridership appears to be a massive driver of crime. However, this estimate is likely **inflated (biased)** because high-ridership stops are often located in dense, low-income areas. The model is mistakenly attributing the neighborhood effect solely to ridership. 
 
-# 确保你的模型名字是 model_6
-model_final <- model_6 
+- **Model 2(+Interaction):** We introduce the Weekend Effect and the interaction term. The main Ridership coefficient increases slightly. This confirms that the relationship isn't identical across the week. By separating weekends, we begin to see that the "baseline risk" shifts, validating the need for a pseudo-panel approach, though the core finding (ridership = risk) remains consistent due to its positive coefficient.  
 
-# 获取系数名 (根据你的模型结果，可能需要微调名字)
-coef_name_base <- "Log_Ridership"
-coef_name_interact <- "Log_Ridership:is_weekend_factorWeekend"
+- **Model 3(+Env & Demo):** A dramatic shift occurs. The **Poverty Rate coefficient** appears and is extremely high (purple dot far to the right), while the **Ridership coefficient drops significantly** (moving left). This is the "Reality Check." Once we account for poverty, we realize that socioeconomic status is the primary driver of crime, not just the bus stop itself. Ridership is still a significant risk factor (the coefficient is still positive), but its impact is much smaller than Model 1 suggested.  
 
-# 提取数值
-beta_base <- coef(model_final)[coef_name_base]        # 工作日斜率
-beta_interact <- coef(model_final)[coef_name_interact]# 交互项系数
-vcov_matrix <- vcov(model_final)                      # 协方差矩阵
+- **Model 4(+PSA Fixed Effects):** The Poverty Rate coefficient shrinks (moves left, pink dot) compared to Model 3. By adding PSA (Police Service Area) fixed effects, we control for unobserved neighborhood characteristics (like local culture or police presence). The model **no longer relies solely on "Poverty"** to explain crime clusters, making the estimates for specific variables like Alcohol Outlets and Ridership more precise and trustworthy.  
 
-# --- 2. 计算两个场景下的真实斜率 (Marginal Effects) ---
+- **Model 5(+Lag):** The Temporal Lag variable appears at the top with a very high positive coefficient. The strongest predictor of future crime is past crime. Adding this variable absorbs a huge amount of variance, creating a very strict test for our other variables.
 
-# A. 工作日 (Weekday): 也就是基准组 (Base)
-slope_weekday <- beta_base
-se_weekday <- sqrt(vcov_matrix[coef_name_base, coef_name_base])
-p_weekday <- 2 * (1 - pnorm(abs(slope_weekday / se_weekday)))
-
-# B. 周末 (Weekend): 基准 + 交互 (Base + Interaction)
-slope_weekend <- beta_base + beta_interact
-# 计算组合方差: Var(A+B) = Var(A) + Var(B) + 2*Cov(A,B)
-var_weekend <- vcov_matrix[coef_name_base, coef_name_base] + 
-               vcov_matrix[coef_name_interact, coef_name_interact] + 
-               2 * vcov_matrix[coef_name_base, coef_name_interact]
-se_weekend <- sqrt(var_weekend)
-p_weekend <- 2 * (1 - pnorm(abs(slope_weekend / se_weekend)))
-
-# --- 3. 制作“最终判决表” (The Verdict Table) ---
-
-hypothesis_test <- data.frame(
-  Scenario = c("Weekday (Commuters)", "Weekend (Non-Routine)"),
-  Impact_Slope = c(slope_weekday, slope_weekend),
-  Std_Error = c(se_weekday, se_weekend),
-  P_Value = c(p_weekday, p_weekend)
-) %>%
-  mutate(
-    # 自动生成结论列
-    Interpretation = case_when(
-      Impact_Slope > 0 & P_Value < 0.05 ~ "Positive & Significant (Target Hypothesis Supported)",
-      Impact_Slope < 0 & P_Value < 0.05 ~ "Negative & Significant (Eyes on Street Supported)",
-      TRUE ~ "Not Significant"
-    ),
-    # 格式化数字
-    Impact_Slope = round(Impact_Slope, 3),
-    Std_Error = round(Std_Error, 3),
-    P_Value = ifelse(P_Value < 0.001, "< 0.001", round(P_Value, 3))
-  )
-
-# 输出美化表格
-kbl(hypothesis_test, caption = "The Verdict: Does Ridership Drive Crime in Both Contexts?") %>%
-  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>%
-  row_spec(1:2, bold = TRUE, color = "black", background = "#e6f5ff") %>%
-  footnote(general = "Slopes > 0 indicate that higher ridership is associated with higher crime counts.")
-
-# --- 4. 制作“效应对比图” (Visual Evidence) ---
-
-ggplot(hypothesis_test, aes(x = Scenario, y = Impact_Slope, color = Scenario)) +
-  # 画点和误差线 (95% CI)
-  geom_pointrange(aes(ymin = Impact_Slope - 1.96*Std_Error, 
-                      ymax = Impact_Slope + 1.96*Std_Error), 
-                  size = 1.2, linewidth = 1.5) +
-  
-  # 添加一条 0 线 (如果区间跨过0线，说明不显著)
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
-  
-  # 标注文字
-  geom_text(aes(label = paste("Slope =", Impact_Slope)), 
-            vjust = -1.5, fontface = "bold") +
-  
-  scale_color_manual(values = c("#3182bd", "#de2d26")) +
-  ylim(min(0, slope_weekday - 0.2), max(slope_weekend + 0.2)) + # 动态调整Y轴
-  
-  labs(
-    title = "Comparing the 'Ridership Effect'",
-    subtitle = "Both slopes are significantly positive (>0), rejecting 'Eyes on the Street'.",
-    y = "Impact of Ridership on Crime (Coefficient)",
-    x = ""
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(face = "bold", size = 14),
-    axis.text.x = element_text(size = 12, face = "bold"),
-    axis.title.y = element_text(size = 11, face = "bold")
-  )
-```
-
-
-**Coefficient Interpretation:**
-
--   Fixed Effects Interpretation:
+- **Model 6(Final Refined):** `Ridership` remains positive and significant (approx 0.1), proving that even after controlling for everything (poverty, history, location), more passengers still equal more targets. `Alcohol` shows a stable positive link. `Dist to Police` shows a negative coefficient (meaning crime is higher closer to stations),  but this is probably because there are bias in original dataset where crimes nearby the police stations are more likely to be recorded.
 
 # Phase 5: Model Validation
 
-## **5.1 Compare all 5 models:**
+## 5.1 Compare all 5 models:
 
 ### 5.1.1 Create predicted vs. actual plot
 
@@ -1488,6 +1317,18 @@ ggplot(plot_data, aes(x = Predicted_Count, y = Crime_Total_Count)) +
   coord_cartesian(xlim = c(0, 50), ylim = c(0, 50))
 ```
 
+- This plot also visualizes our journey from a naive baseline to a robust final model.
+
+- Overall, as more contextual and more spatial information are added, the predicted values align **more closely with the 45° reference line**, indicating improved model fit.
+
+- Models 1–2 rely mainly on ridership and weekend interaction, resulting in wide dispersion and systematic under-prediction at higher crime levels.
+
+- Models 3–4 incorporate environmental (alcohol outlets, lighting) and demographic features, producing a noticeably tighter prediction band and capturing more variation across stops.
+
+- Model 5 adds temporal information (lagged crime rate), which further stabilizes predictions and reduces bias.
+
+- Compared with Model 5, Model 6 trims several weak or redundant predictors while keeping the key effects. This parsimonious specification makes the model more stable and interpretable and helps reduce potential multicollinearity among highly correlated socioeconomic variables.
+
 ### 5.1.2 Report and Compare RMSE, MAE, R²
 
 ```{r}
@@ -1552,13 +1393,34 @@ kable(validation_summary, digits = 3, caption = "5-Fold Cross-Validation Metrics
   column_spec(4, color = "green", bold = TRUE)
 ```
 
-**Discussion of the most mattered features**:
+These findings are validated through 5-fold cross-validation, which evaluates each model on unseen data rather than relying solely on in-sample fit. The consistent reduction in MAE and RMSE across folds confirms that the improvements are not artifacts of overfitting but reflect real gains in out-of-sample predictive performance.
 
-Result Interpretation (Interpretation Guide for Report):
+1. Baseline: Mobility Activity (Model 1)
 
-MAE (Mean Absolute Error):看 Model 3 或 Model 4 的 MAE。假设 MAE = 2.5，这意味着你的模型对每个站点整个夏天的犯罪预测，平均误差在 2.5 起案件左右。
+The model using only ridership intensity establishes a basic relationship between human activity levels and crime, but its predictive capacity is limited. Ridership alone captures general exposure but cannot explain spatial heterogeneity across stops.
 
-Improvement:对比 Model 1 (Baseline) 和 Model 2 (Interaction)。如果 Model 2 的误差更低，说明把周末和工作日分开预测是必要的（支持了你的 Shark Tank Pitch）。对比 Model 3/4。如果加入了环境变量（酒类、路灯）后误差大幅下降，说明环境因素比单纯的客流更重要。
+2. Temporal Structure of Activity (Model 2)
+
+Adding the weekday–weekend interaction improves the model slightly.
+
+3. Built Environment & Demographic features (Model 3)
+
+Alcohol outlet density, Lighting conditions poverty, income, vacancy, and unemployment: these variables substantially reduce prediction error, indicating that crime near transit stops is strongly shaped by both environmental risk factors and neighborhood disadvantage.
+
+4. Spatial Fixed Effect (Model 4)
+
+Introducing police station distance and especially PSA fixed effects further improves performance.
+This suggests that:Crime patterns are partly structured by local policing jurisdictions and there are unobserved spatial factors (culture, enforcement style, land use patterns) that are constant within each PSA.PSA fixed effects absorb these stable spatial characteristics, making the model more robust.
+
+5. Temporal Dependence in Crime (Model 5)
+
+Including lagged crime rate (previous quarter) yields the largest single improvement.
+Lagged crime captures temporal persistence—areas that experienced more crime in the past tend to remain active in the present.This is a very strong and stable predictor, dramatically improving accuracy.
+
+6. Model Refinement & Parsimony (Model 6)
+
+Model 6 streamlines the specification by removing weaker or collinear variables.Despite using fewer predictors, its accuracy remains nearly identical to Model 5.
+This indicates that a refined, parsimonious model with reduced multicollinearity can maintain strong predictive performance while improving interpretability and stability.
 
 # Phase 6: Model Diagnostics
 

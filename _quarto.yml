@@ -47,7 +47,7 @@ website:
           - href: final/Final_appendix.qmd
             text: "Appendix: Crime Count Prediction" 
           - href: final/Slides/Simple.qmd
-            text: "Slide: Crime Count Prediction" 
+            text: "Slides: Crime Count Prediction" 
           
 format:
   html:
