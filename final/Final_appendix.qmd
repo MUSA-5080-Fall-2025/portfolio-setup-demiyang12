@@ -15,7 +15,9 @@ editor:
     wrap: 72
 ---
 
+## Project Objective
 
+This project investigates the complex relationship between transit ridership and public safety around SEPTA bus stops in Philadelphia. By employing Negative Binomial Regression, we explore the tension between two competing theories: whether high passenger volumes act as protective "Eyes on the Street" or attract crime as "Potential Targets." The analysis integrates multi-source data—including ridership, crime incidents, census demographics, and built environment features—and utilizes interaction terms to reveal how risk dynamics shift between weekdays and weekends. Our ultimate goal is to transition SEPTA Transit Police from reactive to predictive deployment, providing a data-driven framework to identify high-risk anomalies and optimize patrol resources for maximum safety impact.
 
 # Phase 1: Data Preparation
 
